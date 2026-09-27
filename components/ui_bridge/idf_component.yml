@@ -1,0 +1,4 @@
+dependencies:
+  # Must match the LVGL version set in the EEZ Studio project (9.5.0).
+  lvgl/lvgl:
+    version: "==9.5.0"

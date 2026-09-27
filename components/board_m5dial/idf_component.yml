@@ -1,0 +1,8 @@
+dependencies:
+  # Exact pins (spike, SPEC 3.3). Private to this component.
+  m5stack/m5unified:
+    version: "==0.2.23"
+    public: false
+  m5stack/m5gfx:
+    version: "==0.2.30"
+    public: false

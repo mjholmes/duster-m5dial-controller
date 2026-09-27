@@ -1,0 +1,156 @@
+menu "Duster controller"
+
+    menu "Control"
+        config CONTROL_PERIOD_MS
+            int "Control task period (ms)"
+            default 20
+            help
+                SPEC 5, design note 4.
+
+        config CONTROL_STUB_AUX_ACK
+            bool "Stub: treat every aux command as ACKed at once"
+            default y
+            help
+                Bring-up only, until aux_link exists (SPEC 11 step 5).
+                Makes opstatus_* follow the commanded state.
+
+        config QUEUE_WAIT_MS
+            int "Bounded queue wait before feeding the task watchdog (ms)"
+            default 500
+            help
+                SPEC 5, Watchdog.
+
+        config CAN_LIGHTS_TIMEOUT_MS
+            int "Light-input CAN timeout, 0x5DE (ms)"
+            default 750
+            help
+                In AUTO, forces MANUAL with both lights off. SPEC 6.2.
+
+        config FROST_RISK_ON_C
+            int "Frost risk on at or below (degC)"
+            default 4
+
+        config BELOW_FREEZING_ON_C
+            int "Below freezing on at or below (degC)"
+            default 0
+
+        config TEMP_FLAG_HYSTERESIS_C
+            int "Temperature flag hysteresis (degC)"
+            default 2
+            help
+                A flag set at or below its threshold T clears only at or above
+                T + hysteresis (default: frost risk on <= 4, off >= 6). Both
+                flags are false while the temperature is stale.
+
+        config STALE_DISPLAY_MS
+            int "Speed / temperature stale timeout (ms)"
+            default 1000
+            help
+                Value shown as unavailable; does not change mode. SPEC 6.2.
+    endmenu
+
+    menu "UI"
+        config UI_LOOP_MS
+            int "UI task loop period (ms)"
+            range 5 10
+            default 5
+            help
+                SPEC 5.
+
+        config UI_BRINGUP_DIAG
+            bool "Bring-up diagnostics"
+            default n
+            help
+                Spike checks (SPEC 3.3): times full-screen redraws at boot
+                (adds about 2 s) and logs touch and encoder input.
+
+        config BUTTON_LONG_PRESS_MS
+            int "Front button long press (ms)"
+            default 1000
+            help
+                Short press = manual, all off. Long press = AUTO.
+
+        config SPEED_DISPLAY_HOLD_MS
+            int "Speed display hold between updates (ms)"
+            default 800
+            help
+                Per-variable display throttle in ui_bridge. SPEC 5, design note 5.
+    endmenu
+
+    menu "Aux light link (RA60)"
+        config AUX_CH_LEDBAR
+            int "LED bar library output_index (0-based)"
+            range 0 5
+            default 1
+            help
+                RA60 output 2. SPEC 7.2.
+
+        config AUX_CH_FOG
+            int "Aux fog library output_index (0-based)"
+            range 0 5
+            default 2
+            help
+                RA60 output 3. SPEC 7.2.
+
+        config AUX_POLL_MS
+            int "aux task loop period (ms)"
+            default 10
+
+        config AUX_ACK_TIMEOUT_MS
+            int "Per-command ACK timeout (ms)"
+            default 200
+
+        config AUX_KEEPALIVE_MS
+            int "Keepalive interval while idle, also back-off after failure (ms)"
+            default 500
+
+        config AUX_LINK_TIMEOUT_MS
+            int "Aux link timeout without a valid ACK (ms)"
+            default 1000
+
+        config AUX_MISMATCH_MS
+            int "Commanded vs ACKed mismatch before warning (ms)"
+            default 1000
+    endmenu
+
+    menu "CAN / OBD"
+        config CAN_LISTEN_ONLY
+            bool "TWAI listen-only mode (no ACKs, no OBD requests)"
+            default y
+            help
+                Bring-up step 1 (SPEC 8.5). Disable only after frames decode
+                cleanly at 500 kbps. OBD/DTC reads need normal mode.
+
+        config CAN_BUS_OFF_BACKOFF_MS
+            int "Bus-off recovery back-off (ms)"
+            default 1000
+            help
+                SPEC 8.5 requires a back-off but gives no value; 1000 ms is a
+                firmware default.
+
+        config DTC_IGNITION_WAIT_MS
+            int "Wait for ignition Pos2/Running before first DTC read (ms)"
+            default 5000
+
+        config DTC_RETRY_MS
+            int "DTC read retry interval (ms)"
+            default 2000
+
+        config DTC_RETRY_COUNT
+            int "DTC read attempts before DTC_READ_FAILED"
+            default 5
+
+        config DTC_REPOLL_S
+            int "PID 01 periodic re-poll interval (s)"
+            default 30
+
+        config OBD_P2_MS
+            int "OBD response timeout, P2 (ms)"
+            default 50
+
+        config ISOTP_CF_TIMEOUT_MS
+            int "ISO-TP consecutive frame gap timeout (ms)"
+            default 150
+    endmenu
+
+endmenu
