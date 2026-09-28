@@ -22,3 +22,7 @@ CONFIG_LV_FONT_MONTSERRAT_28=y
 # Custom partition table: 3 MB app
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# TWAI receive interrupt keeps running while flash is written (NVS saves),
+# so frames are not lost from the small hardware FIFO.
+CONFIG_TWAI_ISR_CACHE_SAFE=y

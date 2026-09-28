@@ -4,6 +4,7 @@
 #include "ui_bridge.h"
 #include "control.h"
 #include "settings.h"
+#include "can_link.h"
 #include "driver/gpio.h"
 
 #include "freertos/FreeRTOS.h"
@@ -31,6 +32,7 @@ void app_main(void)
     ESP_ERROR_CHECK(board_init());
     ESP_ERROR_CHECK(settings_init());
     ESP_ERROR_CHECK(control_start());
+    ESP_ERROR_CHECK(can_link_start());
     ESP_ERROR_CHECK(ui_bridge_start());
 
     vTaskDelay(pdMS_TO_TICKS(2000));

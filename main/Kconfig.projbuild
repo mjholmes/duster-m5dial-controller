@@ -152,6 +152,13 @@ menu "Duster controller"
                 Bring-up step 1 (SPEC 8.5). Disable only after frames decode
                 cleanly at 500 kbps. OBD/DTC reads need normal mode.
 
+        config CAN_LOG_STATS
+            bool "Log CAN statistics every 5 s (bring-up)"
+            default y
+            help
+                Per-signal frame counts, malformed and unknown-value counters,
+                decoded values, and every distinct ID seen.
+
         config CAN_BUS_OFF_BACKOFF_MS
             int "Bus-off recovery back-off (ms)"
             default 1000

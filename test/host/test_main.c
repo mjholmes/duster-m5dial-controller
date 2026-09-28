@@ -4,6 +4,7 @@
 #include "control_core.h"
 #include "button_fsm.h"
 #include "brightness.h"
+#include "can_signals.h"
 
 static int s_checks, s_failures;
 
@@ -167,6 +168,48 @@ static void test_brightness(void)
     CHECK(brightness_effective(80, true, 0, 10) == 80);
 }
 
+static void test_can_decode(void)
+{
+    can_decoded_t d;
+
+    // Field notes: 0x354 27 10 = 100.00 km/h = 62.1 mph.
+    const uint8_t speed[] = { 0x27, 0x10 };
+    CHECK(can_decode(0x354, false, false, speed, 2, &d) == CAN_DEC_OK);
+    CHECK(d.sig == CAN_SIG_SPEED && d.speed.raw_centi_kmh == 10000 && d.speed.mph == 62);
+    const uint8_t fast[] = { 0xFF, 0xFF };   // 655 km/h clamps to 99 mph
+    CHECK(can_decode(0x354, false, false, fast, 2, &d) == CAN_DEC_OK && d.speed.mph == 99);
+    const uint8_t stopped[] = { 0x00, 0x00 };
+    CHECK(can_decode(0x354, false, false, stopped, 2, &d) == CAN_DEC_OK && d.speed.mph == 0);
+    CHECK(can_decode(0x354, false, false, speed, 1, &d) == CAN_DEC_MALFORMED && d.sig == CAN_SIG_SPEED);
+
+    // Temperature: byte 0 - 40.
+    const uint8_t temp[6] = { 0x2D };        // 45 - 40 = 5 degC
+    CHECK(can_decode(0x3BF, false, false, temp, 6, &d) == CAN_DEC_OK && d.ext_temp_c == 5);
+    const uint8_t cold[6] = { 0x1E };        // -10 degC
+    CHECK(can_decode(0x3BF, false, false, cold, 6, &d) == CAN_DEC_OK && d.ext_temp_c == -10);
+    CHECK(can_decode(0x3BF, false, false, temp, 5, &d) == CAN_DEC_MALFORMED);
+
+    // Field notes: 0x5DE byte 0 0x09 = main beam and front fog on.
+    const uint8_t lights[8] = { 0x09 };
+    CHECK(can_decode(0x5DE, false, false, lights, 8, &d) == CAN_DEC_OK);
+    CHECK(d.lights.main_beam && d.lights.front_fog && !d.lights.dipped_beam);
+    const uint8_t dipped[8] = { 0x02 };
+    CHECK(can_decode(0x5DE, false, false, dipped, 8, &d) == CAN_DEC_OK);
+    CHECK(!d.lights.main_beam && !d.lights.front_fog && d.lights.dipped_beam);
+
+    // Ignition enum: known values OK, others counted as unknown.
+    const uint8_t running[8] = { 0xC7 };
+    CHECK(can_decode(0x350, false, false, running, 8, &d) == CAN_DEC_OK && d.ignition_raw == 0xC7);
+    const uint8_t odd[8] = { 0xC2 };
+    CHECK(can_decode(0x350, false, false, odd, 8, &d) == CAN_DEC_UNKNOWN_VALUE && d.sig == CAN_SIG_IGNITION);
+
+    // Not subscribed, extended IDs, RTR.
+    CHECK(can_decode(0x186, false, false, lights, 8, &d) == CAN_DEC_NOT_SUBSCRIBED);
+    CHECK(can_decode(0x5DE, true, false, lights, 8, &d) == CAN_DEC_NOT_SUBSCRIBED);
+    CHECK(can_decode(0x5DE, false, true, lights, 8, &d) == CAN_DEC_MALFORMED);
+    CHECK(can_is_obd_response(0x7E8) && !can_is_obd_response(0x7E0));
+}
+
 int main(void)
 {
     test_power_on();
@@ -178,6 +221,7 @@ int main(void)
     test_temp_flag_hysteresis();
     test_button();
     test_brightness();
+    test_can_decode();
     printf("%d/%d checks passed\n", s_checks - s_failures, s_checks);
     return s_failures ? 1 : 0;
 }
