@@ -335,6 +335,9 @@ static void test_can_decode(void)
     CHECK(can_is_obd_response(0x7E8) && !can_is_obd_response(0x7E0));
 }
 
+void run_obd_tests(void);
+extern int g_obd_checks, g_obd_failures;
+
 int main(void)
 {
     test_power_on();
@@ -354,6 +357,9 @@ int main(void)
     test_button();
     test_brightness();
     test_can_decode();
+    run_obd_tests();
+    s_checks += g_obd_checks;
+    s_failures += g_obd_failures;
     printf("%d/%d checks passed\n", s_checks - s_failures, s_checks);
     return s_failures ? 1 : 0;
 }

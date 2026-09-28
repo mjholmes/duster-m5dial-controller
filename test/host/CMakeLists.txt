@@ -11,11 +11,16 @@ add_executable(host_tests
     ${ROOT}/components/ui_bridge/button_fsm.c
     ${ROOT}/components/ui_bridge/brightness.c
     ${ROOT}/components/can_link/can_signals.c
+    test_obd.c
+    ${ROOT}/components/obd/isotp_rx.c
+    ${ROOT}/components/obd/obd_decode.c
+    ${ROOT}/components/obd/obd_core.c
 )
 target_include_directories(host_tests PRIVATE
     ${ROOT}/components/control/include
     ${ROOT}/components/ui_bridge
     ${ROOT}/components/can_link/include
+    ${ROOT}/components/obd/include
 )
 target_compile_options(host_tests PRIVATE -std=c11 -Wall -Wextra -Werror)
 
