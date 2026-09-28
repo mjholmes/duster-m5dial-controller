@@ -7,13 +7,6 @@ menu "Duster controller"
             help
                 SPEC 5, design note 4.
 
-        config CONTROL_STUB_AUX_ACK
-            bool "Stub: treat every aux command as ACKed at once"
-            default y
-            help
-                Bring-up only, until aux_link exists (SPEC 11 step 5).
-                Makes opstatus_* follow the commanded state.
-
         config QUEUE_WAIT_MS
             int "Bounded queue wait before feeding the task watchdog (ms)"
             default 500

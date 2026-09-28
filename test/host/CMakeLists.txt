@@ -18,3 +18,25 @@ target_include_directories(host_tests PRIVATE
     ${ROOT}/components/can_link/include
 )
 target_compile_options(host_tests PRIVATE -std=c11 -Wall -Wextra -Werror)
+
+# RA60 send state machine against the real auxbeam-light-controller sources
+# and the library's mock UART / mock clock (sibling checkout).
+set(AUXBEAM ${ROOT}/../auxbeam-light-controller)
+add_executable(aux_tests
+    test_aux.c
+    ${ROOT}/components/aux_link/aux_sm.c
+    ${AUXBEAM}/src/checksum.c
+    ${AUXBEAM}/src/light_protocol.c
+    ${AUXBEAM}/src/command_queue.c
+    ${AUXBEAM}/src/auxbeam_light.c
+    ${AUXBEAM}/test/host/mock_hal_uart.c
+)
+target_include_directories(aux_tests PRIVATE
+    ${ROOT}/components/aux_link/include
+    ${ROOT}/components/control/include
+    ${AUXBEAM}/include
+    ${AUXBEAM}/src
+    ${AUXBEAM}/test/host
+    ${AUXBEAM}/test/host/stubs
+)
+target_compile_options(aux_tests PRIVATE -std=c11 -Wall -Wextra)

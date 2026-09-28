@@ -1,0 +1,5 @@
+dependencies:
+  # Development: sibling checkout (must include the L-1/L-2 fixes, never v0.1.0).
+  # Release: switch to a git dependency pinned to a tag containing them (SPEC 7.3).
+  auxbeam-light-controller:
+    path: ../../../auxbeam-light-controller

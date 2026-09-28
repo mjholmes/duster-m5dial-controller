@@ -16,14 +16,24 @@ static const char *TAG = "control";
 #define CONTROL_TASK_STACK  4096
 #define CTRL_REQ_Q_DEPTH    8
 #define CAN_LIGHTS_Q_DEPTH  8
+#define AUX_CMD_Q_DEPTH     4
+#define AUX_EVT_Q_DEPTH     8
 
 typedef struct {
     vehicle_lights_t lights;
     uint32_t rx_ms;
 } can_lights_item_t;
 
+typedef struct {
+    bool         acked;   // false = failed after retry
+    aux_lights_t lights;  // ACKed state
+    uint32_t     at_ms;
+} aux_evt_t;
+
 static QueueHandle_t s_req_q;
 static QueueHandle_t s_lights_q;
+static QueueHandle_t s_aux_cmd_q;
+static QueueHandle_t s_aux_evt_q;
 static TaskHandle_t s_task;
 static SemaphoreHandle_t s_lock;
 
@@ -32,11 +42,12 @@ static ui_model_t s_model;
 static uint32_t s_speed_rx_ms;
 static uint32_t s_temp_rx_ms;
 static uint32_t s_lights_rx_ms;
-static uint32_t s_aux_rx_ms;
 
 // control task only.
 static ctrl_core_t s_core;
 static vehicle_lights_t s_veh;
+static bool s_aux_fault;
+static uint32_t s_aux_rx_ms;   // last RA60 ACK
 
 static uint16_t s_seq;
 
@@ -68,6 +79,7 @@ static void publish(uint32_t now)
     m->can_timeout = s_core.link_down[LINK_CAN_LIGHTS];
     m->aux_timeout = s_core.link_down[LINK_AUX];
     m->aux_mismatch = s_core.aux_mismatch;
+    m->aux_fault = s_aux_fault;
     m->speed_stale = older_than(now, s_speed_rx_ms, CONFIG_STALE_DISPLAY_MS);
     m->temp_stale = older_than(now, s_temp_rx_ms, CONFIG_STALE_DISPLAY_MS);
 
@@ -78,27 +90,32 @@ static void publish(uint32_t now)
     xSemaphoreGive(s_lock);
 }
 
+// Send-only-on-change keeps aux_cmd_q quiet; the aux task keeps the newest.
+static void post_aux_target(aux_lights_t target)
+{
+    if (xQueueSend(s_aux_cmd_q, &target, 0) != pdTRUE) {
+        aux_lights_t dropped;
+        xQueueReceive(s_aux_cmd_q, &dropped, 0);
+        xQueueSend(s_aux_cmd_q, &target, 0);
+    }
+}
+
 static void update_commanded(void)
 {
     if (ctrl_core_update_commanded(&s_core, s_veh)) {
-        // Posted to aux_cmd_q from step 5.
         ESP_LOGI(TAG, "commanded ledbar %d fog %d", s_core.aux_commanded.ledbar, s_core.aux_commanded.fog);
+        post_aux_target(s_core.aux_commanded);
     }
 }
 
 // Link supervision and safe states, once per control period (SPEC 4.2, 6.2).
 static void supervise(uint32_t now)
 {
-#if CONFIG_CONTROL_STUB_AUX_ACK
-    // No aux_link yet (step 5): treat every command as ACKed at once.
-    ctrl_core_aux_acked(&s_core, s_core.aux_commanded);
-    s_aux_rx_ms = now;
-#endif
     uint32_t last_rx[LINK_COUNT];
     xSemaphoreTake(s_lock, portMAX_DELAY);
     last_rx[LINK_CAN_LIGHTS] = s_lights_rx_ms;
-    last_rx[LINK_AUX] = s_aux_rx_ms;
     xSemaphoreGive(s_lock);
+    last_rx[LINK_AUX] = s_aux_rx_ms;   // control task only
 
     bool was_down[LINK_COUNT];
     for (int i = 0; i < LINK_COUNT; i++) {
@@ -153,6 +170,16 @@ static void control_task(void *arg)
             s_veh = item.lights;
             update_commanded();
         }
+        aux_evt_t evt;
+        while (xQueueReceive(s_aux_evt_q, &evt, 0) == pdTRUE) {
+            if (evt.acked) {
+                ctrl_core_aux_acked(&s_core, evt.lights);
+                s_aux_rx_ms = evt.at_ms;
+                s_aux_fault = false;
+            } else {
+                s_aux_fault = true;
+            }
+        }
 
         if ((int32_t)(xTaskGetTickCount() - next_period) >= 0) {
             next_period += period;
@@ -167,8 +194,10 @@ esp_err_t control_start(void)
 {
     s_req_q = xQueueCreate(CTRL_REQ_Q_DEPTH, sizeof(ctrl_req_t));
     s_lights_q = xQueueCreate(CAN_LIGHTS_Q_DEPTH, sizeof(can_lights_item_t));
+    s_aux_cmd_q = xQueueCreate(AUX_CMD_Q_DEPTH, sizeof(aux_lights_t));
+    s_aux_evt_q = xQueueCreate(AUX_EVT_Q_DEPTH, sizeof(aux_evt_t));
     s_lock = xSemaphoreCreateMutex();
-    if (!s_req_q || !s_lights_q || !s_lock) {
+    if (!s_req_q || !s_lights_q || !s_aux_cmd_q || !s_aux_evt_q || !s_lock) {
         return ESP_ERR_NO_MEM;
     }
 
@@ -249,6 +278,27 @@ void control_can_lights(vehicle_lights_t lights, bool changed, uint32_t rx_ms)
         xQueueReceive(s_lights_q, &dropped, 0);
         xQueueSend(s_lights_q, &item, 0);
         ESP_LOGW(TAG, "can_lights_q full, dropped oldest");
+    }
+    xTaskNotifyGive(s_task);
+}
+
+bool control_aux_take_target(aux_lights_t *out)
+{
+    bool got = false;
+    while (xQueueReceive(s_aux_cmd_q, out, 0) == pdTRUE) {
+        got = true;   // keep only the newest
+    }
+    return got;
+}
+
+void control_aux_event(bool acked, aux_lights_t lights, uint32_t at_ms)
+{
+    aux_evt_t evt = { .acked = acked, .lights = lights, .at_ms = at_ms };
+    if (xQueueSend(s_aux_evt_q, &evt, 0) != pdTRUE) {
+        aux_evt_t dropped;
+        xQueueReceive(s_aux_evt_q, &dropped, 0);
+        xQueueSend(s_aux_evt_q, &evt, 0);
+        ESP_LOGW(TAG, "aux_evt_q full, dropped oldest");
     }
     xTaskNotifyGive(s_task);
 }
