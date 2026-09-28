@@ -84,13 +84,35 @@ static void event_handler_cb_speedo_obj3(lv_event_t *e) {
     }
 }
 
-static void event_handler_cb_speedo_obj4(lv_event_t *e) {
+static void event_handler_cb_speedo_dtccount(lv_event_t *e) {
     lv_event_code_t event = lv_event_get_code(e);
     if (event == LV_EVENT_VALUE_CHANGED) {
         lv_obj_t *ta = lv_event_get_target_obj(e);
         if (tick_value_change_obj != ta) {
             bool value = lv_obj_has_state(ta, LV_STATE_CHECKED);
             set_var_is_dtc_present(value);
+        }
+    }
+}
+
+static void event_handler_cb_speedo_obj4(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    if (event == LV_EVENT_VALUE_CHANGED) {
+        lv_obj_t *ta = lv_event_get_target_obj(e);
+        if (tick_value_change_obj != ta) {
+            bool value = lv_obj_has_state(ta, LV_STATE_CHECKED);
+            set_var_is_comms_lost(value);
+        }
+    }
+}
+
+static void event_handler_cb_speedo_comms(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    if (event == LV_EVENT_VALUE_CHANGED) {
+        lv_obj_t *ta = lv_event_get_target_obj(e);
+        if (tick_value_change_obj != ta) {
+            bool value = lv_obj_has_state(ta, LV_STATE_CHECKED);
+            set_var_is_comms_lost(value);
         }
     }
 }
@@ -248,6 +270,7 @@ void create_screen_speedo() {
             objects.dtccount = obj;
             lv_obj_set_pos(obj, 119, 39);
             lv_obj_set_size(obj, 31, 18);
+            lv_obj_add_event_cb(obj, event_handler_cb_speedo_dtccount, LV_EVENT_ALL, 0);
             lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
             lv_obj_set_style_text_color(obj, lv_color_hex(0xff9800), LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_20, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -273,6 +296,8 @@ void create_screen_speedo() {
             objects.comms = obj;
             lv_obj_set_pos(obj, 185, 129);
             lv_obj_set_size(obj, 31, 18);
+            lv_obj_add_event_cb(obj, event_handler_cb_speedo_comms, LV_EVENT_ALL, 0);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
             lv_obj_set_style_text_color(obj, lv_color_hex(0xff0000), LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_20, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_text_opa(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -393,19 +418,19 @@ void tick_screen_speedo() {
     }
     {
         bool new_val = get_var_is_dtc_present();
-        bool cur_val = lv_obj_has_flag(objects.dtccount, LV_OBJ_FLAG_CLICKABLE);
+        bool cur_val = lv_obj_has_state(objects.dtccount, LV_STATE_CHECKED);
         if (new_val != cur_val) {
             tick_value_change_obj = objects.dtccount;
             if (new_val) {
-                lv_obj_add_flag(objects.dtccount, LV_OBJ_FLAG_CLICKABLE);
+                lv_obj_add_state(objects.dtccount, LV_STATE_CHECKED);
             } else {
-                lv_obj_remove_flag(objects.dtccount, LV_OBJ_FLAG_CLICKABLE);
+                lv_obj_remove_state(objects.dtccount, LV_STATE_CHECKED);
             }
             tick_value_change_obj = NULL;
         }
     }
     {
-        bool new_val = get_var_is_dtc_present();
+        bool new_val = get_var_is_comms_lost();
         bool cur_val = lv_obj_has_state(objects.obj4, LV_STATE_CHECKED);
         if (new_val != cur_val) {
             tick_value_change_obj = objects.obj4;
@@ -423,6 +448,19 @@ void tick_screen_speedo() {
         if (strcmp(new_val, cur_val) != 0) {
             tick_value_change_obj = objects.comms;
             lv_label_set_text(objects.comms, new_val);
+            tick_value_change_obj = NULL;
+        }
+    }
+    {
+        bool new_val = get_var_is_comms_lost();
+        bool cur_val = lv_obj_has_state(objects.comms, LV_STATE_CHECKED);
+        if (new_val != cur_val) {
+            tick_value_change_obj = objects.comms;
+            if (new_val) {
+                lv_obj_add_state(objects.comms, LV_STATE_CHECKED);
+            } else {
+                lv_obj_remove_state(objects.comms, LV_STATE_CHECKED);
+            }
             tick_value_change_obj = NULL;
         }
     }
