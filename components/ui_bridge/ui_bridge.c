@@ -44,22 +44,27 @@ static void handle_button(button_fsm_t *btn, uint32_t now_ms)
 }
 
 // Encoder sets display brightness (decided; replaces LVGL focus navigation).
-// The setting is saved; night dim is applied on top while headlights are on.
-static void handle_brightness(const ui_model_t *m, int *shown_pct)
+// Day and night levels are separate saved settings; the encoder adjusts the
+// one currently shown. Night follows dipped beam (brightness_night_step()).
+static void handle_brightness(const ui_model_t *m, bool *night, int *shown_pct)
 {
     static const brightness_cfg_t cfg = {
         .min_pct = CONFIG_DISPLAY_BRIGHTNESS_MIN_PCT,
         .max_pct = 100,
         .step_pct = CONFIG_DISPLAY_BRIGHTNESS_STEP_PCT,
     };
-    int32_t detents = board_encoder_take();
-    if (detents != 0) {
-        settings_set_brightness_pct(brightness_step(settings_brightness_pct(), detents, &cfg));
+    bool was_night = *night;
+    *night = brightness_night_step(*night, !m->can_timeout, m->veh.dipped_beam, m->veh.main_beam);
+    if (*night != was_night) {
+        ESP_LOGI(TAG, "display %s", *night ? "night" : "day");
     }
 
-    bool night = !m->can_timeout && (m->veh.dipped_beam || m->veh.main_beam);
-    int pct = brightness_effective(settings_brightness_pct(), night,
-                                   CONFIG_DISPLAY_NIGHT_DIM_PCT, CONFIG_DISPLAY_BRIGHTNESS_MIN_PCT);
+    int32_t detents = board_encoder_take();
+    if (detents != 0) {
+        settings_set_brightness_pct(*night, brightness_step(settings_brightness_pct(*night), detents, &cfg));
+    }
+
+    int pct = settings_brightness_pct(*night);
     if (pct != *shown_pct) {
         *shown_pct = pct;
         board_display_brightness(brightness_to_level(pct));
@@ -78,6 +83,7 @@ static void ui_task(void *arg)
 #endif
 
     int shown_pct = -1;
+    bool night = false;
 
     button_fsm_t btn = { 0 };
     for (;;) {
@@ -86,7 +92,7 @@ static void ui_task(void *arg)
         handle_button(&btn, now_ms);
 
         ui_vars_refresh(now_ms);
-        handle_brightness(ui_vars_model(), &shown_pct);
+        handle_brightness(ui_vars_model(), &night, &shown_pct);
         settings_service(now_ms);
         ui_tick();
         lv_timer_handler();

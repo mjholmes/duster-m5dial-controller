@@ -23,11 +23,10 @@ uint8_t brightness_to_level(int pct)
     return (uint8_t)((pct * 255 + 50) / 100);
 }
 
-int brightness_effective(int pct, bool night, int dim_pct, int min_pct)
+bool brightness_night_step(bool prev_night, bool lights_valid, bool dipped_beam, bool main_beam)
 {
-    if (!night) {
-        return pct;
+    if (!lights_valid || main_beam) {
+        return prev_night;
     }
-    int dimmed = pct - dim_pct;
-    return dimmed < min_pct ? min_pct : dimmed;
+    return dipped_beam;
 }

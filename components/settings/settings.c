@@ -9,9 +9,15 @@
 
 static const char *TAG = "settings";
 static const char *NVS_NAMESPACE = "settings";
-static const char *KEY_BRIGHTNESS = "bright_pct";
+// Index 0 = day, 1 = night.
+static const char *const KEY_BRIGHTNESS[2] = { "bright_day", "bright_night" };
+// Single-level key from before day/night levels; read once as the day value.
+static const char *KEY_BRIGHTNESS_OLD = "bright_pct";
 
-static int s_brightness_pct = CONFIG_DISPLAY_BRIGHTNESS_DEFAULT_PCT;
+static int s_brightness_pct[2] = {
+    CONFIG_DISPLAY_BRIGHTNESS_DAY_DEFAULT_PCT,
+    CONFIG_DISPLAY_BRIGHTNESS_NIGHT_DEFAULT_PCT,
+};
 static bool s_dirty;
 static uint32_t s_changed_ms;
 
@@ -34,27 +40,31 @@ esp_err_t settings_init(void)
 
     nvs_handle_t h;
     if (nvs_open(NVS_NAMESPACE, NVS_READONLY, &h) == ESP_OK) {
-        uint8_t pct;
-        if (nvs_get_u8(h, KEY_BRIGHTNESS, &pct) == ESP_OK && brightness_valid(pct)) {
-            s_brightness_pct = pct;
+        for (int i = 0; i < 2; i++) {
+            uint8_t pct;
+            if (nvs_get_u8(h, KEY_BRIGHTNESS[i], &pct) == ESP_OK && brightness_valid(pct)) {
+                s_brightness_pct[i] = pct;
+            } else if (i == 0 && nvs_get_u8(h, KEY_BRIGHTNESS_OLD, &pct) == ESP_OK && brightness_valid(pct)) {
+                s_brightness_pct[0] = pct;
+            }
         }
         nvs_close(h);
     }
-    ESP_LOGI(TAG, "brightness %d%%", s_brightness_pct);
+    ESP_LOGI(TAG, "brightness day %d%%, night %d%%", s_brightness_pct[0], s_brightness_pct[1]);
     return ESP_OK;
 }
 
-int settings_brightness_pct(void)
+int settings_brightness_pct(bool night)
 {
-    return s_brightness_pct;
+    return s_brightness_pct[night];
 }
 
-void settings_set_brightness_pct(int pct)
+void settings_set_brightness_pct(bool night, int pct)
 {
-    if (!brightness_valid(pct) || pct == s_brightness_pct) {
+    if (!brightness_valid(pct) || pct == s_brightness_pct[night]) {
         return;
     }
-    s_brightness_pct = pct;
+    s_brightness_pct[night] = pct;
     s_dirty = true;
     s_changed_ms = (uint32_t)(esp_timer_get_time() / 1000);
 }
@@ -69,7 +79,9 @@ void settings_service(uint32_t now_ms)
     nvs_handle_t h;
     esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &h);
     if (err == ESP_OK) {
-        err = nvs_set_u8(h, KEY_BRIGHTNESS, (uint8_t)s_brightness_pct);
+        for (int i = 0; i < 2 && err == ESP_OK; i++) {
+            err = nvs_set_u8(h, KEY_BRIGHTNESS[i], (uint8_t)s_brightness_pct[i]);
+        }
         if (err == ESP_OK) {
             err = nvs_commit(h);
         }
@@ -78,6 +90,6 @@ void settings_service(uint32_t now_ms)
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "save failed: %s", esp_err_to_name(err));
     } else {
-        ESP_LOGI(TAG, "saved brightness %d%%", s_brightness_pct);
+        ESP_LOGI(TAG, "saved brightness day %d%%, night %d%%", s_brightness_pct[0], s_brightness_pct[1]);
     }
 }

@@ -161,11 +161,16 @@ static void test_brightness(void)
     CHECK(brightness_to_level(0) == 0);
     CHECK(brightness_to_level(10) == 26);
 
-    // Night dim: points off the setting, floored at the minimum.
-    CHECK(brightness_effective(80, false, 20, 10) == 80);
-    CHECK(brightness_effective(80, true, 20, 10) == 60);
-    CHECK(brightness_effective(25, true, 20, 10) == 10);
-    CHECK(brightness_effective(80, true, 0, 10) == 80);
+    // Day/night from the headlight switch. Sequences seen on the car.
+    bool n = false;
+    n = brightness_night_step(n, true, false, false); CHECK(!n);  // lights off
+    n = brightness_night_step(n, true, false, true);  CHECK(!n);  // daytime flash stays day
+    n = brightness_night_step(n, true, false, false); CHECK(!n);
+    n = brightness_night_step(n, true, true, false);  CHECK(n);   // dipped on: night
+    n = brightness_night_step(n, true, false, true);  CHECK(n);   // main on clears dipped bit: stays night
+    n = brightness_night_step(n, true, true, false);  CHECK(n);   // back to dipped
+    n = brightness_night_step(n, false, false, false); CHECK(n);  // CAN lost: hold
+    n = brightness_night_step(n, true, false, false); CHECK(!n);  // lights off: day
 }
 
 static void test_can_decode(void)

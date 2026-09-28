@@ -8,14 +8,16 @@
 // Threading: ui task only in Phase 1.
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 #include "esp_err.h"
 
 // Initialise NVS and load settings (defaults if absent or invalid).
 esp_err_t settings_init(void);
 
-int settings_brightness_pct(void);
-void settings_set_brightness_pct(int pct);
+// Display brightness for day (night = false) or night (night = true).
+int settings_brightness_pct(bool night);
+void settings_set_brightness_pct(bool night, int pct);
 
 // Commit pending changes once they have been stable long enough. Call each loop.
 void settings_service(uint32_t now_ms);

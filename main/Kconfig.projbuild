@@ -70,10 +70,19 @@ menu "Duster controller"
             help
                 Short press = manual, all off. Long press = AUTO.
 
-        config DISPLAY_BRIGHTNESS_DEFAULT_PCT
-            int "Display brightness when no saved setting exists (%)"
+        config DISPLAY_BRIGHTNESS_DAY_DEFAULT_PCT
+            int "Day brightness when no saved setting exists (%)"
             range 10 100
             default 80
+
+        config DISPLAY_BRIGHTNESS_NIGHT_DEFAULT_PCT
+            int "Night brightness when no saved setting exists (%)"
+            range 10 100
+            default 40
+            help
+                Night is selected while dipped beam is on (main beam holds the
+                current state). Day and night levels are set separately with
+                the encoder and saved.
 
         config DISPLAY_BRIGHTNESS_MIN_PCT
             int "Lowest brightness the encoder can set (%)"
@@ -86,14 +95,6 @@ menu "Duster controller"
             int "Brightness change per encoder detent (%)"
             range 1 25
             default 5
-
-        config DISPLAY_NIGHT_DIM_PCT
-            int "Night dim: brightness reduction while headlights are on (% points)"
-            range 0 90
-            default 20
-            help
-                Applied while dipped or main beam is on and CAN light data is
-                fresh. Never takes brightness below the minimum.
 
         config SETTINGS_SAVE_DELAY_MS
             int "Save a changed setting after it is stable for (ms)"
