@@ -3,6 +3,7 @@
 #include "board_m5dial.h"
 #include "ui_bridge.h"
 #include "control.h"
+#include "settings.h"
 #include "driver/gpio.h"
 
 #include "freertos/FreeRTOS.h"
@@ -25,7 +26,10 @@ void app_main(void)
     board_hold_on();
     log_heap("boot");
 
+    // Must run before TWAI (Port A) and the aux UART (Port B) are set up:
+    // board_init() checks M5Unified left those pads untouched.
     ESP_ERROR_CHECK(board_init());
+    ESP_ERROR_CHECK(settings_init());
     ESP_ERROR_CHECK(control_start());
     ESP_ERROR_CHECK(ui_bridge_start());
 

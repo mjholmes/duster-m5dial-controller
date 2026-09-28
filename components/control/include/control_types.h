@@ -23,6 +23,7 @@ typedef struct {
 typedef struct {
     bool main_beam;
     bool front_fog;
+    bool dipped_beam;   // 0x5DE byte 0 bit 1; display night dim only
 } vehicle_lights_t;
 
 typedef struct {

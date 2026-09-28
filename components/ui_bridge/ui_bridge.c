@@ -4,8 +4,10 @@
 #include "lvgl_port.h"
 #include "ui_vars.h"
 #include "button_fsm.h"
+#include "brightness.h"
 #include "board_m5dial.h"
 #include "control.h"
+#include "settings.h"
 #include "ui.h"
 
 #include "freertos/FreeRTOS.h"
@@ -41,6 +43,29 @@ static void handle_button(button_fsm_t *btn, uint32_t now_ms)
     control_request(&req);
 }
 
+// Encoder sets display brightness (decided; replaces LVGL focus navigation).
+// The setting is saved; night dim is applied on top while headlights are on.
+static void handle_brightness(const ui_model_t *m, int *shown_pct)
+{
+    static const brightness_cfg_t cfg = {
+        .min_pct = CONFIG_DISPLAY_BRIGHTNESS_MIN_PCT,
+        .max_pct = 100,
+        .step_pct = CONFIG_DISPLAY_BRIGHTNESS_STEP_PCT,
+    };
+    int32_t detents = board_encoder_take();
+    if (detents != 0) {
+        settings_set_brightness_pct(brightness_step(settings_brightness_pct(), detents, &cfg));
+    }
+
+    bool night = !m->can_timeout && (m->veh.dipped_beam || m->veh.main_beam);
+    int pct = brightness_effective(settings_brightness_pct(), night,
+                                   CONFIG_DISPLAY_NIGHT_DIM_PCT, CONFIG_DISPLAY_BRIGHTNESS_MIN_PCT);
+    if (pct != *shown_pct) {
+        *shown_pct = pct;
+        board_display_brightness(brightness_to_level(pct));
+    }
+}
+
 static void ui_task(void *arg)
 {
     (void)arg;
@@ -52,6 +77,8 @@ static void ui_task(void *arg)
     lvgl_port_benchmark();
 #endif
 
+    int shown_pct = -1;
+
     button_fsm_t btn = { 0 };
     for (;;) {
         uint32_t now_ms = (uint32_t)(esp_timer_get_time() / 1000);
@@ -59,6 +86,8 @@ static void ui_task(void *arg)
         handle_button(&btn, now_ms);
 
         ui_vars_refresh(now_ms);
+        handle_brightness(ui_vars_model(), &shown_pct);
+        settings_service(now_ms);
         ui_tick();
         lv_timer_handler();
         vTaskDelay(pdMS_TO_TICKS(CONFIG_UI_LOOP_MS));

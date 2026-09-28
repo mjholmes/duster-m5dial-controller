@@ -1,5 +1,5 @@
-// LVGL 9 port: display on board_m5dial, touch as pointer, encoder plus front
-// button as encoder device, tick from esp_timer (SPEC 5 note 1, 9.3).
+// LVGL 9 port: display on board_m5dial, touch as pointer, tick from esp_timer
+// (SPEC 5 note 1). The encoder and front button bypass LVGL (ui_bridge.c).
 // Called only from the ui task.
 
 #include "lvgl_port.h"
@@ -15,7 +15,6 @@
 static lv_color_t s_buf1[BOARD_LCD_WIDTH * BUF_ROWS];
 static lv_color_t s_buf2[BOARD_LCD_WIDTH * BUF_ROWS];
 
-static lv_indev_t *s_encoder;
 #if CONFIG_UI_BRINGUP_DIAG
 static uint32_t s_frames;
 static uint32_t s_flushed_px;
@@ -62,19 +61,6 @@ static void touch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
     data->point.y = last_y;
 }
 
-static void encoder_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
-{
-    (void)indev;
-    data->enc_diff = (int16_t)board_encoder_take();
-#if CONFIG_UI_BRINGUP_DIAG
-    if (data->enc_diff) {
-        ESP_LOGI("lvgl", "encoder %+d", data->enc_diff);
-    }
-#endif
-    // The front button bypasses LVGL (SPEC 9.3), so the encoder has no enter key.
-    data->state = LV_INDEV_STATE_RELEASED;
-}
-
 static void tick_cb(void *arg)
 {
     (void)arg;
@@ -97,13 +83,6 @@ esp_err_t lvgl_port_init(void)
     lv_indev_set_type(touch, LV_INDEV_TYPE_POINTER);
     lv_indev_set_read_cb(touch, touch_read_cb);
 
-    s_encoder = lv_indev_create();
-    lv_indev_set_type(s_encoder, LV_INDEV_TYPE_ENCODER);
-    lv_indev_set_read_cb(s_encoder, encoder_read_cb);
-
-    lv_group_t *group = lv_group_create();
-    lv_group_set_default(group);
-    lv_indev_set_group(s_encoder, group);
 
     const esp_timer_create_args_t args = {
         .callback = tick_cb,

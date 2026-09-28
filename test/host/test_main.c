@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "control_core.h"
 #include "button_fsm.h"
+#include "brightness.h"
 
 static int s_checks, s_failures;
 
@@ -146,6 +147,26 @@ static void test_button(void)
     CHECK(button_fsm_step(&b, true, 0x00000300u, 1000) == BTN_EVT_LONG);
 }
 
+static void test_brightness(void)
+{
+    const brightness_cfg_t cfg = { .min_pct = 10, .max_pct = 100, .step_pct = 5 };
+    CHECK(brightness_step(80, 1, &cfg) == 85);
+    CHECK(brightness_step(80, -2, &cfg) == 70);
+    CHECK(brightness_step(95, 3, &cfg) == 100);      // clamp high
+    CHECK(brightness_step(15, -5, &cfg) == 10);      // clamp low, never off
+    CHECK(brightness_step(50, 0, &cfg) == 50);
+    CHECK(brightness_step(50, -100000, &cfg) == 10); // large delta, no overflow
+    CHECK(brightness_to_level(100) == 255);
+    CHECK(brightness_to_level(0) == 0);
+    CHECK(brightness_to_level(10) == 26);
+
+    // Night dim: points off the setting, floored at the minimum.
+    CHECK(brightness_effective(80, false, 20, 10) == 80);
+    CHECK(brightness_effective(80, true, 20, 10) == 60);
+    CHECK(brightness_effective(25, true, 20, 10) == 10);
+    CHECK(brightness_effective(80, true, 0, 10) == 80);
+}
+
 int main(void)
 {
     test_power_on();
@@ -156,6 +177,7 @@ int main(void)
     test_manual_all_off();
     test_temp_flag_hysteresis();
     test_button();
+    test_brightness();
     printf("%d/%d checks passed\n", s_checks - s_failures, s_checks);
     return s_failures ? 1 : 0;
 }

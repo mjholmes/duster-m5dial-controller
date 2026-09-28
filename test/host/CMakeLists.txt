@@ -9,6 +9,7 @@ add_executable(host_tests
     test_main.c
     ${ROOT}/components/control/control_core.c
     ${ROOT}/components/ui_bridge/button_fsm.c
+    ${ROOT}/components/ui_bridge/brightness.c
 )
 target_include_directories(host_tests PRIVATE
     ${ROOT}/components/control/include

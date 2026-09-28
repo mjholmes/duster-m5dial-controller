@@ -62,13 +62,44 @@ menu "Duster controller"
             default n
             help
                 Spike checks (SPEC 3.3): times full-screen redraws at boot
-                (adds about 2 s) and logs touch and encoder input.
+                (adds about 2 s) and logs touch input.
 
         config BUTTON_LONG_PRESS_MS
             int "Front button long press (ms)"
             default 1000
             help
                 Short press = manual, all off. Long press = AUTO.
+
+        config DISPLAY_BRIGHTNESS_DEFAULT_PCT
+            int "Display brightness when no saved setting exists (%)"
+            range 10 100
+            default 80
+
+        config DISPLAY_BRIGHTNESS_MIN_PCT
+            int "Lowest brightness the encoder can set (%)"
+            range 1 100
+            default 10
+            help
+                Keeps the display from being turned fully off by accident.
+
+        config DISPLAY_BRIGHTNESS_STEP_PCT
+            int "Brightness change per encoder detent (%)"
+            range 1 25
+            default 5
+
+        config DISPLAY_NIGHT_DIM_PCT
+            int "Night dim: brightness reduction while headlights are on (% points)"
+            range 0 90
+            default 20
+            help
+                Applied while dipped or main beam is on and CAN light data is
+                fresh. Never takes brightness below the minimum.
+
+        config SETTINGS_SAVE_DELAY_MS
+            int "Save a changed setting after it is stable for (ms)"
+            default 3000
+            help
+                Limits flash writes while the encoder is being turned.
 
         config SPEED_DISPLAY_HOLD_MS
             int "Speed display hold between updates (ms)"
