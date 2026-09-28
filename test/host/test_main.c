@@ -23,10 +23,32 @@ static bool lights(aux_lights_t l, bool ledbar, bool fog)
     return l.ledbar == ledbar && l.fog == fog;
 }
 
+static const ctrl_cfg_t k_cfg = {
+    .link_timeout_ms = { [LINK_CAN_LIGHTS] = 750, [LINK_AUX] = 1000 },
+    .aux_mismatch_ms = 1000,
+};
+
+// Core after power-on with every link delivering data at t = 1000 ms.
+static ctrl_core_t make_core(void)
+{
+    ctrl_core_t c;
+    ctrl_core_init(&c, &k_cfg);
+    const uint32_t fresh[LINK_COUNT] = { 1000, 1000 };
+    ctrl_core_tick(&c, fresh, 1000);
+    return c;
+}
+
+static void set_auto(ctrl_core_t *c)
+{
+    ctrl_req_t m = { .type = REQ_SET_MODE, .mode = MODE_AUTO };
+    ctrl_core_apply(c, &m);
+}
+
 static void test_power_on(void)
 {
     ctrl_core_t c;
-    ctrl_core_init(&c);
+    ctrl_core_init(&c, &k_cfg);
+    CHECK(c.link_down[LINK_CAN_LIGHTS] && c.link_down[LINK_AUX]);  // down until data arrives
     CHECK(c.mode == MODE_MANUAL);
     CHECK(lights(c.manual_state, false, false));
     CHECK(lights(c.aux_commanded, false, false));
@@ -34,8 +56,7 @@ static void test_power_on(void)
 
 static void test_toggle_in_manual(void)
 {
-    ctrl_core_t c;
-    ctrl_core_init(&c);
+    ctrl_core_t c = make_core();
     ctrl_req_t r = req(REQ_TOGGLE_LIGHT);
     r.light = AUX_LIGHT_FOG;
     r.seq = 7;
@@ -51,8 +72,7 @@ static void test_toggle_in_manual(void)
 
 static void test_light_requests_rejected_in_auto(void)
 {
-    ctrl_core_t c;
-    ctrl_core_init(&c);
+    ctrl_core_t c = make_core();
     ctrl_req_t m = req(REQ_SET_MODE);
     m.mode = MODE_AUTO;
     m.seq = 1;
@@ -69,8 +89,7 @@ static void test_light_requests_rejected_in_auto(void)
 
 static void test_auto_follows_vehicle(void)
 {
-    ctrl_core_t c;
-    ctrl_core_init(&c);
+    ctrl_core_t c = make_core();
     ctrl_req_t m = req(REQ_SET_MODE);
     m.mode = MODE_AUTO;
     ctrl_core_apply(&c, &m);
@@ -82,8 +101,7 @@ static void test_auto_follows_vehicle(void)
 
 static void test_auto_to_manual_bumpless(void)
 {
-    ctrl_core_t c;
-    ctrl_core_init(&c);
+    ctrl_core_t c = make_core();
     ctrl_req_t m = req(REQ_SET_MODE);
     m.mode = MODE_AUTO;
     ctrl_core_apply(&c, &m);
@@ -98,8 +116,7 @@ static void test_auto_to_manual_bumpless(void)
 
 static void test_manual_all_off(void)
 {
-    ctrl_core_t c;
-    ctrl_core_init(&c);
+    ctrl_core_t c = make_core();
     ctrl_req_t m = req(REQ_SET_MODE);
     m.mode = MODE_AUTO;
     ctrl_core_apply(&c, &m);
@@ -110,6 +127,107 @@ static void test_manual_all_off(void)
     CHECK(lights(c.manual_state, false, false));
     CHECK(ctrl_core_update_commanded(&c, (vehicle_lights_t){ .main_beam = true, .front_fog = true }));
     CHECK(lights(c.aux_commanded, false, false));
+}
+
+static void test_can_timeout_in_auto_forces_manual_off(void)
+{
+    ctrl_core_t c = make_core();
+    set_auto(&c);
+    CHECK(c.mode == MODE_AUTO);
+    ctrl_core_update_commanded(&c, (vehicle_lights_t){ .main_beam = true, .front_fog = true });
+    CHECK(lights(c.aux_commanded, true, true));
+
+    uint32_t rx[LINK_COUNT] = { 1000, 1700 };
+    CHECK(!ctrl_core_tick(&c, rx, 1749));             // 749 ms: still up
+    CHECK(!c.link_down[LINK_CAN_LIGHTS] && c.mode == MODE_AUTO);
+    CHECK(ctrl_core_tick(&c, rx, 1750));              // 750 ms: lost
+    CHECK(c.link_down[LINK_CAN_LIGHTS]);
+    CHECK(c.mode == MODE_MANUAL && lights(c.manual_state, false, false));
+    CHECK(ctrl_core_update_commanded(&c, (vehicle_lights_t){ .main_beam = true, .front_fog = true }));
+    CHECK(lights(c.aux_commanded, false, false));     // stale inputs no longer drive lights
+}
+
+static void test_can_timeout_in_manual_is_warning_only(void)
+{
+    ctrl_core_t c = make_core();
+    ctrl_req_t t = req(REQ_TOGGLE_LIGHT);
+    t.light = AUX_LIGHT_FOG;
+    ctrl_core_apply(&c, &t);
+    ctrl_core_update_commanded(&c, (vehicle_lights_t){ 0 });
+
+    const uint32_t rx[LINK_COUNT] = { 1000, 2500 };
+    CHECK(!ctrl_core_tick(&c, rx, 2500));
+    CHECK(c.link_down[LINK_CAN_LIGHTS]);
+    CHECK(c.mode == MODE_MANUAL && lights(c.manual_state, false, true));  // fog stays on
+}
+
+static void test_auto_refused_while_can_down_then_allowed(void)
+{
+    ctrl_core_t c;
+    ctrl_core_init(&c, &k_cfg);                        // no CAN data yet
+    ctrl_req_t m = req(REQ_SET_MODE);
+    m.mode = MODE_AUTO;
+    m.seq = 5;
+    CHECK(!ctrl_core_apply(&c, &m));
+    CHECK(c.mode == MODE_MANUAL && c.last_applied_req_seq == 0);
+
+    const uint32_t rx[LINK_COUNT] = { 3000, 3000 };
+    ctrl_core_tick(&c, rx, 3000);                      // CAN arrives
+    CHECK(ctrl_core_apply(&c, &m) && c.mode == MODE_AUTO);
+}
+
+static void test_can_recovery_stays_manual(void)
+{
+    ctrl_core_t c = make_core();
+    set_auto(&c);
+    uint32_t rx[LINK_COUNT] = { 1000, 2000 };
+    ctrl_core_tick(&c, rx, 2000);                      // lost, forced MANUAL
+    rx[LINK_CAN_LIGHTS] = 2100;
+    CHECK(!ctrl_core_tick(&c, rx, 2100));              // back
+    CHECK(!c.link_down[LINK_CAN_LIGHTS]);
+    CHECK(c.mode == MODE_MANUAL);                      // no automatic return to AUTO
+}
+
+static void test_aux_timeout_keeps_mode(void)
+{
+    ctrl_core_t c = make_core();
+    set_auto(&c);
+    const uint32_t rx[LINK_COUNT] = { 2100, 1000 };   // CAN fresh, no RA60 ACK for 1100 ms
+    CHECK(!ctrl_core_tick(&c, rx, 2100));
+    CHECK(c.link_down[LINK_AUX] && !c.link_down[LINK_CAN_LIGHTS]);
+    CHECK(c.mode == MODE_AUTO);
+}
+
+static void test_aux_mismatch(void)
+{
+    ctrl_core_t c = make_core();
+    ctrl_req_t t = req(REQ_TOGGLE_LIGHT);
+    ctrl_core_apply(&c, &t);
+    ctrl_core_update_commanded(&c, (vehicle_lights_t){ 0 });   // LED bar commanded on, not ACKed
+
+    uint32_t rx[LINK_COUNT] = { 5000, 5000 };
+    ctrl_core_tick(&c, rx, 5000);
+    CHECK(!c.aux_mismatch);                            // grace period starts
+    rx[0] = rx[1] = 5999;
+    ctrl_core_tick(&c, rx, 5999);
+    CHECK(!c.aux_mismatch);
+    rx[0] = rx[1] = 6000;
+    ctrl_core_tick(&c, rx, 6000);
+    CHECK(c.aux_mismatch);                             // 1000 ms without ACK
+    ctrl_core_aux_acked(&c, c.aux_commanded);
+    ctrl_core_tick(&c, rx, 6010);
+    CHECK(!c.aux_mismatch);
+}
+
+static void test_link_timeout_across_ms_wrap(void)
+{
+    ctrl_core_t c = make_core();
+    set_auto(&c);
+    const uint32_t rx[LINK_COUNT] = { 0xFFFFFF00u, 0xFFFFFF00u };
+    ctrl_core_tick(&c, rx, 0x00000100u);               // 512 ms later, across the wrap
+    CHECK(!c.link_down[LINK_CAN_LIGHTS] && c.mode == MODE_AUTO);
+    ctrl_core_tick(&c, rx, 0x00000300u);               // 1024 ms later
+    CHECK(c.link_down[LINK_CAN_LIGHTS] && c.mode == MODE_MANUAL);
 }
 
 static void test_temp_flag_hysteresis(void)
@@ -225,6 +343,13 @@ int main(void)
     test_auto_follows_vehicle();
     test_auto_to_manual_bumpless();
     test_manual_all_off();
+    test_can_timeout_in_auto_forces_manual_off();
+    test_can_timeout_in_manual_is_warning_only();
+    test_auto_refused_while_can_down_then_allowed();
+    test_can_recovery_stays_manual();
+    test_aux_timeout_keeps_mode();
+    test_aux_mismatch();
+    test_link_timeout_across_ms_wrap();
     test_temp_flag_hysteresis();
     test_button();
     test_brightness();

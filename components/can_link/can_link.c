@@ -22,7 +22,7 @@
 static const char *TAG = "can";
 
 #define CAN_BITRATE        500000
-#define CAN_RX_Q_DEPTH     64
+#define CAN_RX_Q_DEPTH     128   // ~100 ms of frames at the measured 1300 frames/s
 #define CAN_RX_TASK_CORE   0
 #define CAN_RX_TASK_PRIO   6
 #define CAN_RX_TASK_STACK  4096
