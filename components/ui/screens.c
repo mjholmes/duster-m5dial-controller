@@ -282,7 +282,7 @@ void create_screen_speedo() {
         {
             lv_obj_t *obj = lv_image_create(parent_obj);
             objects.obj4 = obj;
-            lv_obj_set_pos(obj, 185, 94);
+            lv_obj_set_pos(obj, 184, 94);
             lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
             lv_image_set_src(obj, &img_comms);
             lv_obj_add_event_cb(obj, event_handler_cb_speedo_obj4, LV_EVENT_ALL, 0);
@@ -294,8 +294,8 @@ void create_screen_speedo() {
             // comms
             lv_obj_t *obj = lv_label_create(parent_obj);
             objects.comms = obj;
-            lv_obj_set_pos(obj, 185, 129);
-            lv_obj_set_size(obj, 31, 18);
+            lv_obj_set_pos(obj, 177, 129);
+            lv_obj_set_size(obj, 45, 18);
             lv_obj_add_event_cb(obj, event_handler_cb_speedo_comms, LV_EVENT_ALL, 0);
             lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
             lv_obj_set_style_text_color(obj, lv_color_hex(0xff0000), LV_PART_MAIN | LV_STATE_DEFAULT);
