@@ -303,6 +303,13 @@ void control_aux_event(bool acked, aux_lights_t lights, uint32_t at_ms)
     xTaskNotifyGive(s_task);
 }
 
+void control_obd_dtc(const dtc_state_t *dtc)
+{
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    s_model.dtc = *dtc;
+    xSemaphoreGive(s_lock);
+}
+
 void control_can_bus_off(bool bus_off)
 {
     xSemaphoreTake(s_lock, portMAX_DELAY);

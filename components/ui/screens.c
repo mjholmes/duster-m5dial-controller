@@ -472,6 +472,7 @@ void create_screen_manual() {
     lv_obj_set_pos(obj, 0, 0);
     lv_obj_set_size(obj, 240, 240);
     lv_obj_add_event_cb(obj, action_switchto_screen_speedo, LV_EVENT_GESTURE, (void *)0);
+    lv_obj_set_style_bg_color(obj, lv_color_hex(0x1a1a1a), LV_PART_MAIN | LV_STATE_DEFAULT);
     {
         lv_obj_t *parent_obj = obj;
         {
@@ -502,7 +503,7 @@ void create_screen_manual() {
             lv_obj_add_event_cb(obj, action_manualop_pressed_bar, LV_EVENT_CLICKED, (void *)0);
             lv_obj_add_event_cb(obj, event_handler_cb_manual_led_bar, LV_EVENT_ALL, 0);
             lv_obj_set_style_bg_color(obj, lv_color_hex(0xff9800), LV_PART_MAIN | LV_STATE_CHECKED);
-            lv_obj_set_style_bg_color(obj, lv_color_hex(0x767676), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_bg_color(obj, lv_color_hex(0x00bd14), LV_PART_MAIN | LV_STATE_DEFAULT);
             {
                 lv_obj_t *parent_obj = obj;
                 {
@@ -523,7 +524,7 @@ void create_screen_manual() {
             lv_obj_add_event_cb(obj, action_manualop_pressed_fog, LV_EVENT_CLICKED, (void *)0);
             lv_obj_add_event_cb(obj, event_handler_cb_manual_front_fog, LV_EVENT_ALL, 0);
             lv_obj_set_style_bg_color(obj, lv_color_hex(0xff9800), LV_PART_MAIN | LV_STATE_CHECKED);
-            lv_obj_set_style_bg_color(obj, lv_color_hex(0x767676), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_bg_color(obj, lv_color_hex(0x00bd14), LV_PART_MAIN | LV_STATE_DEFAULT);
             {
                 lv_obj_t *parent_obj = obj;
                 {

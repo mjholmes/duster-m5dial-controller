@@ -28,6 +28,15 @@ static const char *TAG = "can";
 #define CAN_RX_TASK_STACK  4096
 #define STATS_PERIOD_MS    5000
 #define SEEN_IDS_MAX       64
+#define OBD_RX_Q_DEPTH     8
+#define TX_SLOTS           4     // = tx_queue_depth
+#define TX_RETRIES         3     // hardware retries per frame; OBD retries at app level
+
+#if CONFIG_CAN_LISTEN_ONLY
+#define LISTEN_ONLY 1
+#else
+#define LISTEN_ONLY 0
+#endif
 
 typedef struct {
     uint32_t id;
@@ -38,6 +47,20 @@ typedef struct {
 
 static twai_node_handle_t s_node;
 static QueueHandle_t s_rx_q;
+static QueueHandle_t s_obd_rx_q;
+
+// The driver keeps a pointer to each frame until it is sent, so frames live
+// in static slots freed by on_tx_done.
+static struct {
+    twai_frame_t  frame;
+    uint8_t       data[8];
+    volatile bool busy;
+} s_tx[TX_SLOTS];
+#if !CONFIG_CAN_LISTEN_ONLY
+static portMUX_TYPE s_tx_lock = portMUX_INITIALIZER_UNLOCKED;
+#endif
+static volatile uint32_t s_tx_failed;
+static volatile bool s_bus_off;
 static volatile uint32_t s_isr_dropped;
 static volatile int s_bus_state = -1;   // twai_error_state_t, -1 = no change pending
 
@@ -75,11 +98,27 @@ static bool IRAM_ATTR on_rx_done(twai_node_handle_t handle, const twai_rx_done_e
     return woken == pdTRUE;
 }
 
+static bool IRAM_ATTR on_tx_done(twai_node_handle_t handle, const twai_tx_done_event_data_t *edata, void *user_ctx)
+{
+    (void)handle;
+    (void)user_ctx;
+    if (!edata->is_tx_success) {
+        s_tx_failed++;
+    }
+    for (int i = 0; i < TX_SLOTS; i++) {
+        if (edata->done_tx_frame == &s_tx[i].frame) {
+            s_tx[i].busy = false;
+        }
+    }
+    return false;
+}
+
 static bool IRAM_ATTR on_state_change(twai_node_handle_t handle, const twai_state_change_event_data_t *edata, void *user_ctx)
 {
     (void)handle;
     (void)user_ctx;
     s_bus_state = edata->new_sta;
+    s_bus_off = edata->new_sta == TWAI_ERROR_BUS_OFF;
     return false;
 }
 
@@ -128,7 +167,10 @@ static void handle_frame(const can_rx_frame_t *f, uint32_t now)
     }
 #endif
     if (can_is_obd_response(f->id)) {
-        s_stats.obd++;   // routed to obd_rx_q from step 6
+        s_stats.obd++;
+        if (f->len == 8 && xQueueSend(s_obd_rx_q, f->data, 0) != pdTRUE) {
+            ESP_LOGW(TAG, "obd_rx_q full, dropped 0x7E8 frame");   // SPEC 5: drop, log
+        }
         return;
     }
 
@@ -189,9 +231,9 @@ static void log_stats(void)
     twai_node_record_t rec = { 0 };
     twai_node_get_info(s_node, &st, &rec);
     static uint32_t last_bus_err;
-    ESP_LOGI(TAG, "%lu frames, %d IDs seen, isr dropped %lu, obd %lu, %s (rec %u tec %u), bus errors +%lu",
+    ESP_LOGI(TAG, "%lu frames, %d IDs seen, isr dropped %lu, obd %lu, tx failed %lu, %s (rec %u tec %u), bus errors +%lu",
              (unsigned long)s_stats.frames, s_stats.seen_count,
-             (unsigned long)s_isr_dropped, (unsigned long)s_stats.obd,
+             (unsigned long)s_isr_dropped, (unsigned long)s_stats.obd, (unsigned long)s_tx_failed,
              bus_state_name(st.state), st.rx_error_count, st.tx_error_count,
              (unsigned long)(rec.bus_err_num - last_bus_err));
     last_bus_err = rec.bus_err_num;
@@ -223,6 +265,8 @@ static void can_rx_task(void *arg)
 {
     (void)arg;
     uint32_t last_stats = (uint32_t)(esp_timer_get_time() / 1000);
+    uint32_t bus_off_since = 0;
+    bool recovering = false;
     can_rx_frame_t f;
     for (;;) {
         // Bounded wait so the task can feed the watchdog (step 7) and log.
@@ -230,12 +274,26 @@ static void can_rx_task(void *arg)
             handle_frame(&f, (uint32_t)(esp_timer_get_time() / 1000));
         }
 
+        uint32_t now_ms = (uint32_t)(esp_timer_get_time() / 1000);
         int state = s_bus_state;
         if (state >= 0) {
             s_bus_state = -1;
             ESP_LOGW(TAG, "bus state: %s", bus_state_name(state));
-            // Recovery with back-off comes with normal mode (step 6).
             control_can_bus_off(state == TWAI_ERROR_BUS_OFF);
+            if (state == TWAI_ERROR_BUS_OFF) {
+                bus_off_since = now_ms;
+                recovering = false;
+            }
+        }
+        // Bus-off recovery with a back-off, never in a tight loop (SPEC 8.5).
+        // The controller rejoins after 129 x 11 recessive bits; on_state_change
+        // then reports error active.
+        if (s_bus_off && !recovering && (uint32_t)(now_ms - bus_off_since) >= CONFIG_CAN_BUS_OFF_BACKOFF_MS) {
+            ESP_LOGW(TAG, "bus off for %d ms, recovering", CONFIG_CAN_BUS_OFF_BACKOFF_MS);
+            recovering = twai_node_recover(s_node) == ESP_OK;
+            if (!recovering) {
+                bus_off_since = now_ms;   // try again after another back-off
+            }
         }
 
 #if CONFIG_CAN_LOG_STATS
@@ -253,7 +311,8 @@ static void can_rx_task(void *arg)
 esp_err_t can_link_start(void)
 {
     s_rx_q = xQueueCreate(CAN_RX_Q_DEPTH, sizeof(can_rx_frame_t));
-    if (!s_rx_q) {
+    s_obd_rx_q = xQueueCreate(OBD_RX_Q_DEPTH, 8);
+    if (!s_rx_q || !s_obd_rx_q) {
         return ESP_ERR_NO_MEM;
     }
 
@@ -265,15 +324,17 @@ esp_err_t can_link_start(void)
             .bus_off_indicator = -1,
         },
         .bit_timing = { .bitrate = CAN_BITRATE },
-        .tx_queue_depth = 4,
+        .tx_queue_depth = TX_SLOTS,
+        .fail_retry_cnt = TX_RETRIES,
         .flags = {
-            .enable_listen_only = CONFIG_CAN_LISTEN_ONLY,
+            .enable_listen_only = LISTEN_ONLY,
         },
     };
     ESP_ERROR_CHECK(twai_new_node_onchip(&cfg, &s_node));
 
     const twai_event_callbacks_t cbs = {
         .on_rx_done = on_rx_done,
+        .on_tx_done = on_tx_done,
         .on_state_change = on_state_change,
     };
     ESP_ERROR_CHECK(twai_node_register_event_callbacks(s_node, &cbs, NULL));
@@ -285,6 +346,48 @@ esp_err_t can_link_start(void)
     }
     ESP_ERROR_CHECK(twai_node_enable(s_node));
     ESP_LOGI(TAG, "TWAI %d kbps, %s, TX G%d RX G%d", CAN_BITRATE / 1000,
-             CONFIG_CAN_LISTEN_ONLY ? "listen-only" : "normal", PIN_CAN_TX, PIN_CAN_RX);
+             LISTEN_ONLY ? "listen-only" : "normal", PIN_CAN_TX, PIN_CAN_RX);
     return ESP_OK;
+}
+
+esp_err_t can_link_send(uint32_t id, const uint8_t data[8])
+{
+#if CONFIG_CAN_LISTEN_ONLY
+    (void)id;
+    (void)data;
+    return ESP_ERR_NOT_SUPPORTED;
+#else
+    if (s_bus_off) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    int slot = -1;
+    taskENTER_CRITICAL(&s_tx_lock);
+    for (int i = 0; i < TX_SLOTS; i++) {
+        if (!s_tx[i].busy) {
+            s_tx[i].busy = true;
+            slot = i;
+            break;
+        }
+    }
+    taskEXIT_CRITICAL(&s_tx_lock);
+    if (slot < 0) {
+        return ESP_ERR_TIMEOUT;
+    }
+    memcpy(s_tx[slot].data, data, 8);
+    s_tx[slot].frame = (twai_frame_t){
+        .header = { .id = id, .dlc = 8 },
+        .buffer = s_tx[slot].data,
+        .buffer_len = 8,
+    };
+    esp_err_t err = twai_node_transmit(s_node, &s_tx[slot].frame, 0);
+    if (err != ESP_OK) {
+        s_tx[slot].busy = false;
+    }
+    return err;
+#endif
+}
+
+bool can_link_obd_receive(uint8_t data[8], uint32_t wait_ms)
+{
+    return xQueueReceive(s_obd_rx_q, data, pdMS_TO_TICKS(wait_ms)) == pdTRUE;
 }

@@ -23,6 +23,9 @@ void control_can_bus_off(bool bus_off);
 bool control_aux_take_target(aux_lights_t *out);
 void control_aux_event(bool acked, aux_lights_t lights, uint32_t at_ms);
 
+// Engine DTC status from the obd_client task (SPEC 8.4).
+void control_obd_dtc(const dtc_state_t *dtc);
+
 // Consistent copy of everything a display shows. Any task.
 void model_snapshot(ui_model_t *out);
 
