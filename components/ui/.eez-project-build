@@ -16,9 +16,11 @@
     "ui_font_saira_condensed_bold_20.c",
     "ui_font_saira_condensed_bold_26.c",
     "ui_font_saira_condensed_bold_92.c",
+    "ui_image_comms.c",
     "ui_image_dacia.c",
     "ui_image_front_fog.c",
     "ui_image_main_beam.c",
+    "ui_image_warning.c",
     "vars.h"
   ]
 }

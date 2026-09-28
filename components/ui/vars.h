@@ -19,7 +19,11 @@ enum FlowGlobalVariables {
     FLOW_GLOBAL_VARIABLE_IS_BELOW_FREEZING = 3,
     FLOW_GLOBAL_VARIABLE_IS_AUTO_MODE = 4,
     FLOW_GLOBAL_VARIABLE_OPSTATUS_FOG = 5,
-    FLOW_GLOBAL_VARIABLE_OPSTATUS_LEDBAR = 6
+    FLOW_GLOBAL_VARIABLE_OPSTATUS_LEDBAR = 6,
+    FLOW_GLOBAL_VARIABLE_IS_DTC_PRESENT = 7,
+    FLOW_GLOBAL_VARIABLE_DTC_COUNT = 8,
+    FLOW_GLOBAL_VARIABLE_IS_COMMS_LOST = 9,
+    FLOW_GLOBAL_VARIABLE_COMMS_TEXT = 10
 };
 
 // Native global variables
@@ -38,6 +42,14 @@ extern bool get_var_opstatus_fog();
 extern void set_var_opstatus_fog(bool value);
 extern bool get_var_opstatus_ledbar();
 extern void set_var_opstatus_ledbar(bool value);
+extern bool get_var_is_dtc_present();
+extern void set_var_is_dtc_present(bool value);
+extern const char *get_var_dtc_count();
+extern void set_var_dtc_count(const char *value);
+extern bool get_var_is_comms_lost();
+extern void set_var_is_comms_lost(bool value);
+extern const char *get_var_comms_text();
+extern void set_var_comms_text(const char *value);
 
 #ifdef __cplusplus
 }

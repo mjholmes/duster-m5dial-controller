@@ -14,6 +14,8 @@ static const char *TAG = "ui_vars";
 static ui_model_t s_snap;
 static char s_speed[4];
 static char s_temp[8];
+static char s_dtc_count[4];
+static const char *s_comms_text = "";
 static uint32_t s_speed_shown_ms;
 static bool s_speed_shown_valid;
 static bool s_started;
@@ -42,6 +44,18 @@ void ui_vars_refresh(uint32_t now_ms)
     } else {
         snprintf(s_temp, sizeof(s_temp), "%d\xC2\xB0" "C", s_snap.ext_temp_c);
     }
+    // DTC (SPEC 8.4). Until the OBD client exists (step 6) the status stays
+    // DTC_NOT_READ and nothing is shown.
+    if (s_snap.dtc.count > 0) {
+        snprintf(s_dtc_count, sizeof(s_dtc_count), "%u", s_snap.dtc.count);
+    } else {
+        s_dtc_count[0] = '\0';
+    }
+
+    bool can_lost = s_snap.can_timeout || s_snap.can_bus_off;
+    bool ra60_lost = s_snap.aux_timeout || s_snap.aux_fault;
+    s_comms_text = can_lost && ra60_lost ? "BOTH" : can_lost ? "CAN" : ra60_lost ? "RA60" : "";
+
     s_started = true;
 }
 
@@ -59,6 +73,11 @@ bool get_var_is_auto_mode(void) { return s_snap.mode == MODE_AUTO; }
 bool get_var_opstatus_ledbar(void) { return s_snap.aux_actual.ledbar; }
 bool get_var_opstatus_fog(void) { return s_snap.aux_actual.fog; }
 
+bool get_var_is_dtc_present(void) { return s_snap.dtc.count > 0 || s_snap.dtc.mil_on; }
+const char *get_var_dtc_count(void) { return s_dtc_count; }
+bool get_var_is_comms_lost(void) { return s_comms_text[0] != '\0'; }
+const char *get_var_comms_text(void) { return s_comms_text; }
+
 static void ignored(const char *name)
 {
     ESP_LOGD(TAG, "set_var_%s ignored (UI is read-only)", name);
@@ -71,3 +90,7 @@ void set_var_is_below_freezing(bool value) { (void)value; ignored("is_below_free
 void set_var_is_auto_mode(bool value) { (void)value; ignored("is_auto_mode"); }
 void set_var_opstatus_ledbar(bool value) { (void)value; ignored("opstatus_ledbar"); }
 void set_var_opstatus_fog(bool value) { (void)value; ignored("opstatus_fog"); }
+void set_var_is_dtc_present(bool value) { (void)value; ignored("is_dtc_present"); }
+void set_var_dtc_count(const char *value) { (void)value; ignored("dtc_count"); }
+void set_var_is_comms_lost(bool value) { (void)value; ignored("is_comms_lost"); }
+void set_var_comms_text(const char *value) { (void)value; ignored("comms_text"); }
