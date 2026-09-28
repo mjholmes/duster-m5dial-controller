@@ -87,7 +87,8 @@ static bool frame_is(const uint8_t *frame, bool ledbar, bool fog)
 
 static void push_ack(uint8_t seq_id)
 {
-    uint8_t ack[FRAME_LEN] = { seq_id, 0xFF, 0xF8 };
+    // cmd_type 0x18, as the real RA60 replies (library L-5).
+    uint8_t ack[FRAME_LEN] = { seq_id, 0xFF, 0x18 };
     ack[10] = light_protocol_calculate_checksum(ack, 10);
     mock_hal_uart_push_rx(ack, sizeof(ack));
 }
@@ -103,6 +104,7 @@ static void test_power_on_sends_all_off_with_unmapped_ignore(void)
     step(POLL_MS);
     CHECK(frames_sent() == 1);
     CHECK(frame_is(last_frame(), false, false));   // outputs 2 and 3 OFF, all others IGNORE
+    CHECK(last_frame()[4] == 0x80 && last_frame()[5] == 0x08 && last_frame()[6] == 0x88);
     CHECK(s_sm.state == AUX_SM_IN_FLIGHT);
     ack_last();
     step(POLL_MS);
@@ -132,6 +134,9 @@ static void test_new_target_sent_and_acked(void)
     aux_sm_set_target(&s_sm, (aux_lights_t){ .ledbar = true });
     step(POLL_MS);
     CHECK(frame_is(last_frame(), true, false));
+    // Literal bytes (library L-6, output 1 in the high nibble): outputs
+    // 1..6 = IGNORE, ON, OFF, IGNORE, IGNORE, IGNORE.
+    CHECK(last_frame()[4] == 0x81 && last_frame()[5] == 0x08 && last_frame()[6] == 0x88);
     ack_last();
     step(POLL_MS);
     CHECK(s_sm.acked.ledbar && !s_sm.acked.fog && s_acked == 2);

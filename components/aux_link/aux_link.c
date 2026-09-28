@@ -52,6 +52,9 @@ static auxbeam_context_t *init_library(void)
 static void aux_task(void *arg)
 {
     (void)arg;
+#if CONFIG_AUX_LOG_FRAMES
+    esp_log_level_set("auxbeam_light", ESP_LOG_DEBUG);
+#endif
     auxbeam_context_t *ctx = init_library();
 
     const aux_sm_cfg_t cfg = {

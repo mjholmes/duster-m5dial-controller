@@ -117,13 +117,25 @@ menu "Duster controller"
             help
                 RA60 output 3. SPEC 7.2.
 
+        config AUX_LOG_FRAMES
+            bool "Log every RA60 frame sent and received (bring-up)"
+            default n
+            help
+                Turns on the auxbeam-light-controller library's debug log:
+                the hex of each command sent and of each 11-byte receive
+                window it tries to decode. Also set Component config > Log >
+                Maximum log verbosity to Debug, or nothing is printed.
+
         config AUX_POLL_MS
             int "aux task loop period (ms)"
             default 10
 
         config AUX_ACK_TIMEOUT_MS
             int "Per-command ACK timeout (ms)"
-            default 200
+            default 400
+            help
+                RA60 turnaround measured on the bench: 150-220 ms from send
+                to ACK received.
 
         config AUX_KEEPALIVE_MS
             int "Keepalive interval while idle, also back-off after failure (ms)"
@@ -131,7 +143,11 @@ menu "Duster controller"
 
         config AUX_LINK_TIMEOUT_MS
             int "Aux link timeout without a valid ACK (ms)"
-            default 1000
+            default 1500
+            help
+                Normal ACK spacing is about 500-700 ms (keepalive plus
+                turnaround); one late ACK and a retry can stretch it to
+                about 1.3 s without the link being lost.
 
         config AUX_MISMATCH_MS
             int "Commanded vs ACKed mismatch before warning (ms)"
