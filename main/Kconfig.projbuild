@@ -159,6 +159,13 @@ menu "Duster controller"
                 Per-signal frame counts, malformed and unknown-value counters,
                 decoded values, and every distinct ID seen.
 
+        config CAN_DUMP_ID
+            hex "Log raw data of this CAN ID when it changes (0 = off)"
+            default 0x0
+            help
+                Bring-up aid for checking an unconfirmed signal against the
+                vehicle. Requires CAN_LOG_STATS.
+
         config CAN_BUS_OFF_BACKOFF_MS
             int "Bus-off recovery back-off (ms)"
             default 1000

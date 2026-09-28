@@ -183,11 +183,13 @@ static void test_can_decode(void)
     CHECK(can_decode(0x354, false, false, speed, 1, &d) == CAN_DEC_MALFORMED && d.sig == CAN_SIG_SPEED);
 
     // Temperature: byte 0 - 40.
-    const uint8_t temp[6] = { 0x2D };        // 45 - 40 = 5 degC
-    CHECK(can_decode(0x3BF, false, false, temp, 6, &d) == CAN_DEC_OK && d.ext_temp_c == 5);
+    // Captured on the car: 0x3B7 31 FA FF CF FE 40 = 9 degC (dash showed 9).
+    const uint8_t temp[6] = { 0x31, 0xFA, 0xFF, 0xCF, 0xFE, 0x40 };
+    CHECK(can_decode(0x3B7, false, false, temp, 6, &d) == CAN_DEC_OK && d.ext_temp_c == 9);
     const uint8_t cold[6] = { 0x1E };        // -10 degC
-    CHECK(can_decode(0x3BF, false, false, cold, 6, &d) == CAN_DEC_OK && d.ext_temp_c == -10);
-    CHECK(can_decode(0x3BF, false, false, temp, 5, &d) == CAN_DEC_MALFORMED);
+    CHECK(can_decode(0x3B7, false, false, cold, 6, &d) == CAN_DEC_OK && d.ext_temp_c == -10);
+    CHECK(can_decode(0x3B7, false, false, temp, 5, &d) == CAN_DEC_MALFORMED);
+    CHECK(can_decode(0x3BF, false, false, temp, 6, &d) == CAN_DEC_NOT_SUBSCRIBED);
 
     // Field notes: 0x5DE byte 0 0x09 = main beam and front fog on.
     const uint8_t lights[8] = { 0x09 };

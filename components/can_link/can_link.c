@@ -116,6 +116,16 @@ static void handle_frame(const can_rx_frame_t *f, uint32_t now)
     s_stats.frames++;
 #if CONFIG_CAN_LOG_STATS
     note_id(f->id);
+    if (CONFIG_CAN_DUMP_ID != 0 && f->id == CONFIG_CAN_DUMP_ID) {
+        static uint8_t last[8];
+        static uint8_t last_len = 0xFF;
+        if (f->len != last_len || memcmp(f->data, last, f->len) != 0) {
+            memcpy(last, f->data, f->len);
+            last_len = f->len;
+            ESP_LOGI(TAG, "dump 0x%03lX [%u] %02X %02X %02X %02X %02X %02X %02X %02X", (unsigned long)f->id, f->len,
+                     f->data[0], f->data[1], f->data[2], f->data[3], f->data[4], f->data[5], f->data[6], f->data[7]);
+        }
+    }
 #endif
     if (can_is_obd_response(f->id)) {
         s_stats.obd++;   // routed to obd_rx_q from step 6
@@ -134,6 +144,14 @@ static void handle_frame(const can_rx_frame_t *f, uint32_t now)
     s_stats.count[d.sig]++;
     if (r == CAN_DEC_UNKNOWN_VALUE) {
         s_stats.unknown_value[d.sig]++;
+#if CONFIG_CAN_LOG_STATS
+        // Log each distinct unknown ignition value once.
+        static uint32_t logged[8];
+        if (d.sig == CAN_SIG_IGNITION && !(logged[d.ignition_raw >> 5] & (1u << (d.ignition_raw & 31)))) {
+            logged[d.ignition_raw >> 5] |= 1u << (d.ignition_raw & 31);
+            ESP_LOGW(TAG, "ignition: unknown value 0x%02X", d.ignition_raw);
+        }
+#endif
         return;
     }
 
@@ -167,9 +185,16 @@ static void log_stats(void)
 {
     ui_model_t m;
     model_snapshot(&m);
-    ESP_LOGI(TAG, "%lu frames, %d IDs seen, isr dropped %lu, obd %lu",
+    twai_node_status_t st = { 0 };
+    twai_node_record_t rec = { 0 };
+    twai_node_get_info(s_node, &st, &rec);
+    static uint32_t last_bus_err;
+    ESP_LOGI(TAG, "%lu frames, %d IDs seen, isr dropped %lu, obd %lu, %s (rec %u tec %u), bus errors +%lu",
              (unsigned long)s_stats.frames, s_stats.seen_count,
-             (unsigned long)s_isr_dropped, (unsigned long)s_stats.obd);
+             (unsigned long)s_isr_dropped, (unsigned long)s_stats.obd,
+             bus_state_name(st.state), st.rx_error_count, st.tx_error_count,
+             (unsigned long)(rec.bus_err_num - last_bus_err));
+    last_bus_err = rec.bus_err_num;
     for (int i = 0; i < CAN_SIG_COUNT; i++) {
         ESP_LOGI(TAG, "  0x%03lX %-15s rx %lu malformed %lu unknown %lu",
                  (unsigned long)can_sig_id(i), can_sig_name(i), (unsigned long)s_stats.count[i],

@@ -9,7 +9,7 @@
 
 typedef enum {
     CAN_SIG_SPEED = 0,    // 0x354 SPEED
-    CAN_SIG_TEMP,         // 0x3BF AMBIENT_TEMP
+    CAN_SIG_TEMP,         // 0x3B7 AMBIENT_TEMP
     CAN_SIG_LIGHTS,       // 0x5DE LIGHTS
     CAN_SIG_IGNITION,     // 0x350 IGNITION_STATUS
     CAN_SIG_COUNT

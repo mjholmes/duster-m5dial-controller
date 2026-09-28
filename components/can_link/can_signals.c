@@ -9,7 +9,7 @@ static const struct {
     const char *name;
 } s_table[CAN_SIG_COUNT] = {
     [CAN_SIG_SPEED]    = { 0x354, 2, "SPEED" },           // BO_ 852: bytes 0-1 BE u16 x 0.01 km/h
-    [CAN_SIG_TEMP]     = { 0x3BF, 6, "AMBIENT_TEMP" },    // BO_ 959: byte 0 - 40 = degC
+    [CAN_SIG_TEMP]     = { 0x3B7, 6, "AMBIENT_TEMP" },    // BO_ 951: byte 0 - 40 = degC
     [CAN_SIG_LIGHTS]   = { 0x5DE, 8, "LIGHTS" },          // BO_ 1502: byte 0 bits 0 MainBeam, 1 DippedBeam, 3 FrontFog
     [CAN_SIG_IGNITION] = { 0x350, 8, "IGNITION_STATUS" }, // BO_ 848: byte 0 enum 0xC3..0xC7
 };
