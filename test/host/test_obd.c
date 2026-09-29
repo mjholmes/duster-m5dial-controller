@@ -334,6 +334,21 @@ static void test_cranking_aborts_and_restarts_when_running(void)
     CHECK(s_nsent == 2 && sent_is(1, OBD_ID_FUNCTIONAL, PID01_REQ, 3));
 }
 
+static void test_engine_start_rereads_between_polls(void)
+{
+    start();
+    tick(10, 0xC7);
+    const uint8_t r[8] = { 0x06, 0x41, 0x01, 0x00, 0, 0, 0, 0 };
+    ecu(r, 0xC7);
+    CHECK(s_c.state == OBD_IDLE && s_nsent == 1);
+    tick(20000, 0xC3);                            // engine stopped, before the next poll (30 s in k_cfg)
+    CHECK(s_nsent == 1);
+    tick(10, 0xC6);                               // restart: cranking
+    CHECK(s_c.state == OBD_WAIT_RUNNING);
+    tick(800, 0xC7);                              // running: fresh read at once
+    CHECK(s_nsent == 2 && sent_is(1, OBD_ID_FUNCTIONAL, PID01_REQ, 3));
+}
+
 static void test_other_ids_ignored(void)
 {
     start();
@@ -364,5 +379,6 @@ void run_obd_tests(void)
     test_mode03_only_when_count_changes();
     test_failed_mode03_rereads_next_poll();
     test_cranking_aborts_and_restarts_when_running();
+    test_engine_start_rereads_between_polls();
     test_other_ids_ignored();
 }

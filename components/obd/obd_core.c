@@ -144,8 +144,9 @@ void obd_core_init(obd_core_t *c, const obd_cfg_t *cfg, uint32_t now_ms)
 
 void obd_core_step(obd_core_t *c, uint32_t now, uint8_t ign, const obd_frame_t *rx)
 {
-    // Cranking aborts any transaction (and the startup wait); restart once
-    // Running is seen.
+    // Cranking aborts any transaction (and the startup wait) and, from any
+    // state including the idle wait, starts a fresh read once Running is seen:
+    // DTCs are re-read after every engine start, not just every repoll_ms.
     if (ign == IGN_START && c->state != OBD_WAIT_RUNNING) {
         isotp_rx_reset(&c->isotp);
         c->state = OBD_WAIT_RUNNING;

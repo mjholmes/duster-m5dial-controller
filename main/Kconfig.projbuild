@@ -207,7 +207,10 @@ menu "Duster controller"
 
         config DTC_REPOLL_S
             int "PID 01 periodic re-poll interval (s)"
-            default 30
+            default 600
+            help
+                10 minutes (decided 2026-09-29). DTCs are also read at every
+                boot (ignition on) and after every engine start.
 
         config OBD_P2_MS
             int "OBD response timeout, P2 (ms)"

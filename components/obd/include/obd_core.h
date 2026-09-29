@@ -16,7 +16,7 @@ typedef struct {
     uint32_t ignition_wait_ms;   // 5000
     uint32_t retry_ms;           // 2000
     uint8_t  retry_count;        // 5 attempts, then DTC_READ_FAILED
-    uint32_t repoll_ms;          // 30000
+    uint32_t repoll_ms;          // 600000 (10 min); also re-read after every engine start
     uint32_t p2_ms;              // 50: response timeout
     uint32_t cf_timeout_ms;      // 150: consecutive frame gap
 } obd_cfg_t;
