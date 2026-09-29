@@ -1,0 +1,54 @@
+dependencies:
+  auxbeam-light-controller:
+    component_hash: c17a71607bd03432b18d6454db842f73db9ff60aabe908ca62a549f553b039c3
+    dependencies:
+    - name: idf
+      version: '>=5.0'
+    source:
+      git: https://github.com/mjholmes/auxbeam-light-controller.git
+      path: .
+      type: git
+    targets:
+    - esp32
+    - esp32s2
+    - esp32s3
+    - esp32c3
+    version: f73fed06857f1f5c9dac2ed6fc137904a39936df
+  idf:
+    source:
+      type: idf
+    version: 5.5.5
+  lvgl/lvgl:
+    component_hash: 184e532558c1c45fefed631f3e235423d22582aafb4630f3e8885c35281a49ae
+    dependencies: []
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 9.5.0
+  m5stack/m5gfx:
+    component_hash: d5a582ee9cdcec465b6bbe4b4073c0e5210cc3a6bfddc18b3bc8474e13d57d59
+    dependencies: []
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 0.2.30
+  m5stack/m5unified:
+    component_hash: 1c23d1e240ff5e571d563a2f124e1022bb8da1c099d495c37834cc02e19240ae
+    dependencies:
+    - name: m5stack/m5gfx
+      registry_url: https://components.espressif.com
+      require: private
+      version: '>=0.2.30'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 0.2.23
+direct_dependencies:
+- auxbeam-light-controller
+- idf
+- lvgl/lvgl
+- m5stack/m5gfx
+- m5stack/m5unified
+manifest_hash: 21121a6c7b45aa3caf534e83c4b977a3efd996e2842092e9afc20c4864166ed2
+target: esp32s3
+version: 2.0.0

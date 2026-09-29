@@ -6,9 +6,5 @@ managed_components/
 CLAUDE.md
 build-host/
 
-# Contains the absolute path of the local auxbeam checkout; commit once the
-# library is a pinned git dependency (SPEC 7.3).
-dependencies.lock
-
 # Project notes, CAN data and reviews are kept outside this repo.
 docs/

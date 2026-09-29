@@ -9,7 +9,7 @@ Firmware for an M5Dial (ESP32-S3) in-car controller and display for a Dacia Dust
 | ESP-IDF | **v5.5.5** (enforced by `idf: "==5.5.5"` in `main/idf_component.yml`) |
 | LVGL | 9.5.0 (must match the EEZ Studio project setting) |
 | M5Unified / M5GFX | 0.2.23 / 0.2.30 (board layer only, subject to the step 1 spike) |
-| auxbeam-light-controller | local path `../auxbeam-light-controller` during development |
+| auxbeam-light-controller | **v0.1.1** git tag (private repo; the build machine needs GitHub access). Locked in `dependencies.lock` |
 
 ## Build
 
@@ -20,7 +20,7 @@ idf.py build
 idf.py -p /dev/ttyACM0 flash monitor
 ```
 
-The auxbeam library is expected as a sibling checkout at `../auxbeam-light-controller`.
+The host tests for the RA60 state machine (`aux_tests`) compile the library sources from a sibling checkout at `../auxbeam-light-controller`; check out tag `v0.1.1` there to match the firmware.
 
 ## Host tests
 
