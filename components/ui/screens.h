@@ -26,9 +26,9 @@ typedef struct _objects_t {
     lv_obj_t *mode_indicator;
     lv_obj_t *obj1;
     lv_obj_t *obj2;
-    lv_obj_t *obj3;
+    lv_obj_t *dtc_warn_icon;
     lv_obj_t *dtccount;
-    lv_obj_t *obj4;
+    lv_obj_t *obj3;
     lv_obj_t *comms;
     lv_obj_t *mode_indicator_1;
     lv_obj_t *led_bar;

@@ -5,6 +5,7 @@
 #include "aux_sm.h"
 #include "control.h"
 #include "pins.h"
+#include "health.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -45,6 +46,7 @@ static auxbeam_context_t *init_library(void)
         }
         // The link reads as lost in control until this succeeds.
         ESP_LOGE(TAG, "auxbeam_light_init failed (%d), retrying", err);
+        health_task_alive();
         vTaskDelay(pdMS_TO_TICKS(INIT_RETRY_MS));
     }
 }
@@ -55,6 +57,7 @@ static void aux_task(void *arg)
 #if CONFIG_AUX_LOG_FRAMES
     esp_log_level_set("auxbeam_light", ESP_LOG_DEBUG);
 #endif
+    health_task_start();
     auxbeam_context_t *ctx = init_library();
 
     const aux_sm_cfg_t cfg = {
@@ -68,6 +71,7 @@ static void aux_task(void *arg)
     bool failing = false;
     TickType_t wake = xTaskGetTickCount();
     for (;;) {
+        health_task_alive();
         aux_lights_t target;
         if (control_aux_take_target(&target)) {
             aux_sm_set_target(&sm, target);

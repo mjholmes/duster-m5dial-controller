@@ -73,7 +73,7 @@ static void event_handler_cb_speedo_obj2(lv_event_t *e) {
     }
 }
 
-static void event_handler_cb_speedo_obj3(lv_event_t *e) {
+static void event_handler_cb_speedo_dtc_warn_icon(lv_event_t *e) {
     lv_event_code_t event = lv_event_get_code(e);
     if (event == LV_EVENT_VALUE_CHANGED) {
         lv_obj_t *ta = lv_event_get_target_obj(e);
@@ -95,7 +95,7 @@ static void event_handler_cb_speedo_dtccount(lv_event_t *e) {
     }
 }
 
-static void event_handler_cb_speedo_obj4(lv_event_t *e) {
+static void event_handler_cb_speedo_obj3(lv_event_t *e) {
     lv_event_code_t event = lv_event_get_code(e);
     if (event == LV_EVENT_VALUE_CHANGED) {
         lv_obj_t *ta = lv_event_get_target_obj(e);
@@ -189,7 +189,7 @@ void create_screen_speedo() {
             // thermometer_label
             lv_obj_t *obj = lv_label_create(parent_obj);
             objects.thermometer_label = obj;
-            lv_obj_set_pos(obj, 86, 185);
+            lv_obj_set_pos(obj, 86, 186);
             lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
             lv_obj_add_event_cb(obj, event_handler_cb_speedo_thermometer_label, LV_EVENT_ALL, 0);
             lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
@@ -254,12 +254,13 @@ void create_screen_speedo() {
             lv_obj_set_style_image_opa(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
         }
         {
+            // dtc_warn_icon
             lv_obj_t *obj = lv_image_create(parent_obj);
-            objects.obj3 = obj;
-            lv_obj_set_pos(obj, 90, 35);
+            objects.dtc_warn_icon = obj;
+            lv_obj_set_pos(obj, 94, 35);
             lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
             lv_image_set_src(obj, &img_warning);
-            lv_obj_add_event_cb(obj, event_handler_cb_speedo_obj3, LV_EVENT_ALL, 0);
+            lv_obj_add_event_cb(obj, event_handler_cb_speedo_dtc_warn_icon, LV_EVENT_ALL, 0);
             lv_obj_remove_flag(obj, LV_OBJ_FLAG_ADV_HITTEST|LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
             lv_obj_set_style_image_opa(obj, 255, LV_PART_MAIN | LV_STATE_CHECKED);
             lv_obj_set_style_image_opa(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -268,7 +269,7 @@ void create_screen_speedo() {
             // dtccount
             lv_obj_t *obj = lv_label_create(parent_obj);
             objects.dtccount = obj;
-            lv_obj_set_pos(obj, 119, 39);
+            lv_obj_set_pos(obj, 121, 39);
             lv_obj_set_size(obj, 31, 18);
             lv_obj_add_event_cb(obj, event_handler_cb_speedo_dtccount, LV_EVENT_ALL, 0);
             lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
@@ -281,11 +282,11 @@ void create_screen_speedo() {
         }
         {
             lv_obj_t *obj = lv_image_create(parent_obj);
-            objects.obj4 = obj;
+            objects.obj3 = obj;
             lv_obj_set_pos(obj, 184, 94);
             lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
             lv_image_set_src(obj, &img_comms);
-            lv_obj_add_event_cb(obj, event_handler_cb_speedo_obj4, LV_EVENT_ALL, 0);
+            lv_obj_add_event_cb(obj, event_handler_cb_speedo_obj3, LV_EVENT_ALL, 0);
             lv_obj_remove_flag(obj, LV_OBJ_FLAG_ADV_HITTEST|LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
             lv_obj_set_style_image_opa(obj, 255, LV_PART_MAIN | LV_STATE_CHECKED);
             lv_obj_set_style_image_opa(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -396,13 +397,13 @@ void tick_screen_speedo() {
     }
     {
         bool new_val = get_var_is_dtc_present();
-        bool cur_val = lv_obj_has_state(objects.obj3, LV_STATE_CHECKED);
+        bool cur_val = lv_obj_has_state(objects.dtc_warn_icon, LV_STATE_CHECKED);
         if (new_val != cur_val) {
-            tick_value_change_obj = objects.obj3;
+            tick_value_change_obj = objects.dtc_warn_icon;
             if (new_val) {
-                lv_obj_add_state(objects.obj3, LV_STATE_CHECKED);
+                lv_obj_add_state(objects.dtc_warn_icon, LV_STATE_CHECKED);
             } else {
-                lv_obj_remove_state(objects.obj3, LV_STATE_CHECKED);
+                lv_obj_remove_state(objects.dtc_warn_icon, LV_STATE_CHECKED);
             }
             tick_value_change_obj = NULL;
         }
@@ -431,13 +432,13 @@ void tick_screen_speedo() {
     }
     {
         bool new_val = get_var_is_comms_lost();
-        bool cur_val = lv_obj_has_state(objects.obj4, LV_STATE_CHECKED);
+        bool cur_val = lv_obj_has_state(objects.obj3, LV_STATE_CHECKED);
         if (new_val != cur_val) {
-            tick_value_change_obj = objects.obj4;
+            tick_value_change_obj = objects.obj3;
             if (new_val) {
-                lv_obj_add_state(objects.obj4, LV_STATE_CHECKED);
+                lv_obj_add_state(objects.obj3, LV_STATE_CHECKED);
             } else {
-                lv_obj_remove_state(objects.obj4, LV_STATE_CHECKED);
+                lv_obj_remove_state(objects.obj3, LV_STATE_CHECKED);
             }
             tick_value_change_obj = NULL;
         }

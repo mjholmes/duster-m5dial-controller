@@ -7,6 +7,14 @@ menu "Duster controller"
             help
                 SPEC 5, design note 4.
 
+        config DIAG_HANG_TASK
+            string "Fault injection: hang this task 10 s after boot (empty = off)"
+            default ""
+            help
+                Step 7 test. One of can_rx, control, aux, obd_client, ui. The
+                task stops feeding the watchdog; expect a task watchdog reset
+                within 3 s and a restart in MANUAL with lights off.
+
         config QUEUE_WAIT_MS
             int "Bounded queue wait before feeding the task watchdog (ms)"
             default 500

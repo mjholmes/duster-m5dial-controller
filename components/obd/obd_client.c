@@ -2,6 +2,7 @@
 #include "obd_core.h"
 #include "can_link.h"
 #include "control.h"
+#include "health.h"
 
 #include <string.h>
 #include "freertos/FreeRTOS.h"
@@ -76,7 +77,9 @@ static void obd_task(void *arg)
     static obd_core_t core;
     obd_core_init(&core, &cfg, now_ms());
 
+    health_task_start();
     for (;;) {
+        health_task_alive();
         ui_model_t m;
         model_snapshot(&m);
 

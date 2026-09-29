@@ -9,6 +9,7 @@
 #include "control.h"
 #include "settings.h"
 #include "ui.h"
+#include "health.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -86,7 +87,9 @@ static void ui_task(void *arg)
     bool night = false;
 
     button_fsm_t btn = { 0 };
+    health_task_start();
     for (;;) {
+        health_task_alive();
         uint32_t now_ms = (uint32_t)(esp_timer_get_time() / 1000);
         board_update();
         handle_button(&btn, now_ms);

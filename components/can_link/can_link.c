@@ -6,6 +6,7 @@
 #include "can_signals.h"
 #include "control.h"
 #include "pins.h"
+#include "health.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -271,7 +272,9 @@ static void can_rx_task(void *arg)
     uint32_t bus_off_since = 0;
     bool recovering = false;
     can_rx_frame_t f;
+    health_task_start();
     for (;;) {
+        health_task_alive();
         // Bounded wait so the task can feed the watchdog (step 7) and log.
         if (xQueueReceive(s_rx_q, &f, pdMS_TO_TICKS(CONFIG_QUEUE_WAIT_MS)) == pdTRUE) {
             handle_frame(&f, (uint32_t)(esp_timer_get_time() / 1000));

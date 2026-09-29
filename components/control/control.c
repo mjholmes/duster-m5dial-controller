@@ -1,5 +1,6 @@
 #include "control.h"
 #include "control_core.h"
+#include "health.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
@@ -152,7 +153,9 @@ static void control_task(void *arg)
     const TickType_t period = pdMS_TO_TICKS(CONFIG_CONTROL_PERIOD_MS);
     TickType_t next_period = xTaskGetTickCount() + period;
 
+    health_task_start();
     for (;;) {
+        health_task_alive();
         // Wake when a producer notifies (request or light-input change) or at
         // the control period, whichever comes first.
         TickType_t now_ticks = xTaskGetTickCount();

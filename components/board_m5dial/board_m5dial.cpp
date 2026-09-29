@@ -7,8 +7,6 @@
 
 #include <M5Unified.hpp>
 #include "esp_log.h"
-#include "esp_check.h"
-#include "soc/gpio_sig_map.h"
 
 static const char *TAG = "board";
 
@@ -34,6 +32,19 @@ extern "C" esp_err_t board_init(void)
     cfg.external_display_value = 0;
     cfg.external_speaker_value = 0;
     cfg.led_brightness = 0;
+
+    // After a watchdog or panic reset (a CPU reset) the GPIO matrix keeps the
+    // previous run's routing (TWAI TX on G13 etc.). Return the Grove pins to
+    // plain GPIO so the check below sees only what M5Unified does.
+    static const gpio_num_t owned[] = { PIN_CAN_TX, PIN_CAN_RX, PIN_AUX_UART_TX, PIN_AUX_UART_RX };
+    // gpio_reset_pin() disables the output (pull-up on, so CAN TX idles
+    // recessive). The old matrix routing may remain but cannot drive the pad.
+    // Do not use esp_rom_gpio_connect_out_signal() here: it enables the output
+    // and would drive CAN TX low (dominant) until TWAI starts.
+    for (gpio_num_t pin : owned) {
+        gpio_reset_pin(pin);
+    }
+
     M5.begin(cfg);
 
     if (M5.getBoard() != m5::board_t::board_M5Dial) {
@@ -42,14 +53,13 @@ extern "C" esp_err_t board_init(void)
     }
     // Spike check 3. M5Unified records Port A as Ex_I2C (so Ex_I2C.isEnabled()
     // is true) but only claims the pins if the bus is begun. Check the pads
-    // themselves: none may be driven by a peripheral or have output enabled.
-    static const gpio_num_t owned[] = { PIN_CAN_TX, PIN_CAN_RX, PIN_AUX_UART_TX, PIN_AUX_UART_RX };
+    // themselves: none may have its output enabled (routing left over from a
+    // previous run with the output disabled cannot drive the pad). Logged, not fatal: TWAI and UART setup take the pins over anyway, and a
+    // failed boot would be far worse than the conflict.
     for (gpio_num_t pin : owned) {
         gpio_io_config_t io = {};
-        ESP_RETURN_ON_ERROR(gpio_get_io_config(pin, &io), TAG, "io config");
-        if (io.oe || io.sig_out != SIG_GPIO_OUT_IDX) {
+        if (gpio_get_io_config(pin, &io) == ESP_OK && io.oe) {
             ESP_LOGE(TAG, "GPIO%d claimed after M5.begin (oe %d, sig_out %lu)", pin, io.oe, (unsigned long)io.sig_out);
-            return ESP_ERR_INVALID_STATE;
         }
     }
     ESP_LOGI(TAG, "M5Dial detected, display %dx%d", (int)M5.Display.width(), (int)M5.Display.height());
