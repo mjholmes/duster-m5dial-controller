@@ -30,7 +30,10 @@ static const char *TAG = "can";
 #define SEEN_IDS_MAX       64
 #define OBD_RX_Q_DEPTH     8
 #define TX_SLOTS           4     // = tx_queue_depth
-#define TX_RETRIES         3     // hardware retries per frame; OBD retries at app level
+// Standard CAN automatic retransmission. On the ESP32-S3 (TWAI HAL v1) any
+// value other than -1 selects single-shot mode (hal/twai_hal_v1.c:
+// ".ss = retry_cnt != -1"), so a single lost arbitration dropped the frame.
+#define TX_RETRIES         -1
 
 #if CONFIG_CAN_LISTEN_ONLY
 #define LISTEN_ONLY 1
