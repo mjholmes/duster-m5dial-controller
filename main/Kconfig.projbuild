@@ -157,10 +157,12 @@ menu "Duster controller"
     menu "CAN / OBD"
         config CAN_LISTEN_ONLY
             bool "TWAI listen-only mode (no ACKs, no OBD requests)"
-            default y
+            default n
             help
-                Bring-up step 1 (SPEC 8.5). Disable only after frames decode
-                cleanly at 500 kbps. OBD/DTC reads need normal mode.
+                Diagnostic option. Normal mode (the default) ACKs vehicle
+                frames and sends the OBD requests for DTC reads; it was
+                verified on the vehicle bus on 2026-09-29 (SPEC 8.5).
+                Listen-only never transmits and disables DTC reads.
 
         config CAN_LOG_STATS
             bool "Log CAN statistics every 5 s (bring-up)"
