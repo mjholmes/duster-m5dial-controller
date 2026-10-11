@@ -3,6 +3,7 @@
 #include "ui_bridge.h"
 #include "lvgl_port.h"
 #include "ui_vars.h"
+#include "ui_styles.h"
 #include "button_fsm.h"
 #include "brightness.h"
 #include "board_m5dial.h"
@@ -95,6 +96,7 @@ static void ui_task(void *arg)
         handle_button(&btn, now_ms);
 
         ui_vars_refresh(now_ms);
+        ui_styles_update();
         handle_brightness(ui_vars_model(), &night, &shown_pct);
         settings_service(now_ms);
         ui_tick();

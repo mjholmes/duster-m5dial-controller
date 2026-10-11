@@ -23,7 +23,18 @@ enum FlowGlobalVariables {
     FLOW_GLOBAL_VARIABLE_IS_DTC_PRESENT = 7,
     FLOW_GLOBAL_VARIABLE_DTC_COUNT = 8,
     FLOW_GLOBAL_VARIABLE_IS_COMMS_LOST = 9,
-    FLOW_GLOBAL_VARIABLE_COMMS_TEXT = 10
+    FLOW_GLOBAL_VARIABLE_COMMS_TEXT = 10,
+    FLOW_GLOBAL_VARIABLE_TYRE_FL_TEXT = 11,
+    FLOW_GLOBAL_VARIABLE_SLIP_FL_TEXT = 12,
+    FLOW_GLOBAL_VARIABLE_TYRE_FR_TEXT = 13,
+    FLOW_GLOBAL_VARIABLE_SLIP_FR_TEXT = 14,
+    FLOW_GLOBAL_VARIABLE_TYRE_RL_TEXT = 15,
+    FLOW_GLOBAL_VARIABLE_SLIP_RL_TEXT = 16,
+    FLOW_GLOBAL_VARIABLE_TYRE_RR_TEXT = 17,
+    FLOW_GLOBAL_VARIABLE_SLIP_RR_TEXT = 18,
+    FLOW_GLOBAL_VARIABLE_WD_MODE_TEXT = 19,
+    FLOW_GLOBAL_VARIABLE_WD_TORQUE_TEXT = 20,
+    FLOW_GLOBAL_VARIABLE_IS_TYRE_WARNING = 21
 };
 
 // Native global variables
@@ -50,6 +61,28 @@ extern bool get_var_is_comms_lost();
 extern void set_var_is_comms_lost(bool value);
 extern const char *get_var_comms_text();
 extern void set_var_comms_text(const char *value);
+extern const char *get_var_tyre_fl_text();
+extern void set_var_tyre_fl_text(const char *value);
+extern const char *get_var_slip_fl_text();
+extern void set_var_slip_fl_text(const char *value);
+extern const char *get_var_tyre_fr_text();
+extern void set_var_tyre_fr_text(const char *value);
+extern const char *get_var_slip_fr_text();
+extern void set_var_slip_fr_text(const char *value);
+extern const char *get_var_tyre_rl_text();
+extern void set_var_tyre_rl_text(const char *value);
+extern const char *get_var_slip_rl_text();
+extern void set_var_slip_rl_text(const char *value);
+extern const char *get_var_tyre_rr_text();
+extern void set_var_tyre_rr_text(const char *value);
+extern const char *get_var_slip_rr_text();
+extern void set_var_slip_rr_text(const char *value);
+extern const char *get_var_wd_mode_text();
+extern void set_var_wd_mode_text(const char *value);
+extern const char *get_var_wd_torque_text();
+extern void set_var_wd_torque_text(const char *value);
+extern bool get_var_is_tyre_warning();
+extern void set_var_is_tyre_warning(bool value);
 
 #ifdef __cplusplus
 }

@@ -12,6 +12,8 @@ extern const lv_img_dsc_t img_front_fog;
 extern const lv_img_dsc_t img_main_beam;
 extern const lv_img_dsc_t img_comms;
 extern const lv_img_dsc_t img_warning;
+extern const lv_img_dsc_t img_chassis;
+extern const lv_img_dsc_t img_tyre_warning;
 
 #ifndef EXT_IMG_DESC_T
 #define EXT_IMG_DESC_T
@@ -21,7 +23,7 @@ typedef struct _ext_img_desc_t {
 } ext_img_desc_t;
 #endif
 
-extern const ext_img_desc_t images[5];
+extern const ext_img_desc_t images[7];
 
 #ifdef __cplusplus
 }

@@ -12,6 +12,10 @@ static const struct {
     [CAN_SIG_TEMP]     = { 0x3B7, 6, "AMBIENT_TEMP" },    // BO_ 951: byte 0 - 40 = degC
     [CAN_SIG_LIGHTS]   = { 0x5DE, 8, "LIGHTS" },          // BO_ 1502: byte 0 bits 0 MainBeam, 1 DippedBeam, 3 FrontFog
     [CAN_SIG_IGNITION] = { 0x350, 8, "IGNITION_STATUS" }, // BO_ 848: byte 0 enum 0xC3..0xC7
+    [CAN_SIG_TPMS]              = { 0x673, 7, "TPMS_PRESSURES" },    // BO_ 1651
+    [CAN_SIG_WHEEL_SPEED_FRONT] = { 0x29A, 8, "WHEEL_SPEED_FRONT" }, // BO_ 666
+    [CAN_SIG_WHEEL_SPEED_REAR]  = { 0x29C, 8, "WHEEL_SPEED_REAR" },  // BO_ 668
+    [CAN_SIG_ETC]               = { 0x1AA, 4, "ETC_STATUS" },        // BO_ 426
 };
 
 #define OBD_ENGINE_RESPONSE_ID 0x7E8
@@ -72,6 +76,37 @@ can_dec_result_t can_decode(uint32_t id, bool extended, bool rtr,
         if (data[0] < IGNITION_MIN || data[0] > IGNITION_MAX) {
             return CAN_DEC_UNKNOWN_VALUE;
         }
+        return CAN_DEC_OK;
+
+    case CAN_SIG_TPMS:
+        out->tpms.failure           = (data[0] >> 6) & 1;
+        out->tpms.state[TYRE_RR]    = (data[0] >> 3) & 7;
+        out->tpms.state[TYRE_RL]    = data[0] & 7;
+        out->tpms.state[TYRE_FR]    = data[1] >> 5;
+        out->tpms.state[TYRE_FL]    = (data[1] >> 2) & 7;
+        out->tpms.pressure_raw[TYRE_RR] = data[2];
+        out->tpms.pressure_raw[TYRE_RL] = data[3];
+        out->tpms.pressure_raw[TYRE_FR] = data[4];
+        out->tpms.pressure_raw[TYRE_FL] = data[5];
+        return CAN_DEC_OK;
+
+    case CAN_SIG_WHEEL_SPEED_FRONT:
+        out->wheel_speed_front.fr_raw = (uint16_t)((data[0] << 8) | data[1]);
+        out->wheel_speed_front.fl_raw = (uint16_t)((data[2] << 8) | data[3]);
+        out->wheel_speed_front.speed_raw_centi_kmh = (uint16_t)((data[4] << 8) | data[5]);
+        return CAN_DEC_OK;
+
+    case CAN_SIG_WHEEL_SPEED_REAR:
+        out->wheel_speed_rear.rl_raw = (uint16_t)((data[0] << 8) | data[1]);
+        out->wheel_speed_rear.rr_raw = (uint16_t)((data[2] << 8) | data[3]);
+        return CAN_DEC_OK;
+
+    case CAN_SIG_ETC:
+        out->etc.torque_nm = (uint16_t)((((data[2] & 0x7F) << 1) | (data[3] >> 7)) * 10);
+        out->etc.coupler  = data[3] & 0x03;
+        out->etc.mode     = (data[3] >> 4) & 0x03;
+        out->etc.selector = (data[3] >> 2) & 0x03;
+        out->etc.failure  = (data[3] >> 6) & 0x01;
         return CAN_DEC_OK;
 
     default:

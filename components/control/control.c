@@ -43,6 +43,10 @@ static ui_model_t s_model;
 static uint32_t s_speed_rx_ms;
 static uint32_t s_temp_rx_ms;
 static uint32_t s_lights_rx_ms;
+static uint32_t s_tpms_rx_ms;
+static uint32_t s_wheel_front_rx_ms;
+static uint32_t s_wheel_rear_rx_ms;
+static uint32_t s_etc_rx_ms;
 
 // control task only.
 static ctrl_core_t s_core;
@@ -83,6 +87,15 @@ static void publish(uint32_t now)
     m->aux_fault = s_aux_fault;
     m->speed_stale = older_than(now, s_speed_rx_ms, CONFIG_STALE_DISPLAY_MS);
     m->temp_stale = older_than(now, s_temp_rx_ms, CONFIG_STALE_DISPLAY_MS);
+
+    // Tyres / 4WD: these frames exist only at ignition level, and TPMS only
+    // while moving, so stale/no-value is a normal state here, not a fault
+    // (docs/ui-tyres-4wd-spec.md 4) -- unlike speed/temp, nothing else
+    // reacts to these stale flags except display formatting.
+    m->tyre_pressures.stale = older_than(now, s_tpms_rx_ms, CONFIG_TPMS_STALE_MS);
+    m->wheel_speeds.stale = older_than(now, s_wheel_front_rx_ms, CONFIG_WHEEL_SPEED_STALE_MS) ||
+                            older_than(now, s_wheel_rear_rx_ms, CONFIG_WHEEL_SPEED_STALE_MS);
+    m->etc.stale = older_than(now, s_etc_rx_ms, CONFIG_ETC_STALE_MS);
 
     m->frost_risk = ctrl_temp_flag(m->frost_risk, m->temp_stale, m->ext_temp_c,
                                    CONFIG_FROST_RISK_ON_C, CONFIG_TEMP_FLAG_HYSTERESIS_C);
@@ -317,6 +330,49 @@ void control_can_bus_off(bool bus_off)
 {
     xSemaphoreTake(s_lock, portMAX_DELAY);
     s_model.can_bus_off = bus_off;
+    xSemaphoreGive(s_lock);
+}
+
+void control_can_tpms(const uint8_t pressure_raw[TYRE_COUNT], const uint8_t state[TYRE_COUNT], bool failure, uint32_t rx_ms)
+{
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    for (int i = 0; i < TYRE_COUNT; i++) {
+        s_model.tyre_pressures.raw[i] = pressure_raw[i];
+        s_model.tyre_pressures.state[i] = state[i];
+    }
+    s_model.tyre_pressures.failure = failure;
+    s_tpms_rx_ms = rx_ms;
+    xSemaphoreGive(s_lock);
+}
+
+void control_can_wheel_speed_front(uint16_t fl_raw, uint16_t fr_raw, uint16_t speed_centi_kmh, uint32_t rx_ms)
+{
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    s_model.wheel_speeds.raw[TYRE_FL] = fl_raw;
+    s_model.wheel_speeds.raw[TYRE_FR] = fr_raw;
+    s_model.wheel_speeds.speed_centi_kmh = speed_centi_kmh;
+    s_wheel_front_rx_ms = rx_ms;
+    xSemaphoreGive(s_lock);
+}
+
+void control_can_wheel_speed_rear(uint16_t rl_raw, uint16_t rr_raw, uint32_t rx_ms)
+{
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    s_model.wheel_speeds.raw[TYRE_RL] = rl_raw;
+    s_model.wheel_speeds.raw[TYRE_RR] = rr_raw;
+    s_wheel_rear_rx_ms = rx_ms;
+    xSemaphoreGive(s_lock);
+}
+
+void control_can_etc(uint16_t torque_nm, uint8_t coupler, uint8_t mode, uint8_t selector, bool failure, uint32_t rx_ms)
+{
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    s_model.etc.torque_nm = torque_nm;
+    s_model.etc.coupler = coupler;
+    s_model.etc.mode = mode;
+    s_model.etc.selector = selector;
+    s_model.etc.failure = failure;
+    s_etc_rx_ms = rx_ms;
     xSemaphoreGive(s_lock);
 }
 

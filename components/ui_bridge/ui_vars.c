@@ -20,6 +20,16 @@ static uint32_t s_speed_shown_ms;
 static bool s_speed_shown_valid;
 static bool s_started;
 
+// Tyres / 4WD (docs/ui-tyres-4wd-spec.md 5, 6.1, 9).
+static char s_tyre_text[TYRE_COUNT][6];   // "26" or "--"
+static char s_slip_text[TYRE_COUNT][6];   // "+14%" / "-3%" / "0%" / "--"
+static char s_wd_mode[6];                 // "AUTO" / "LOCK" / "2WD" / "--"
+static char s_wd_torque[10];              // "120 Nm" / "-- Nm"
+static tyre_severity_t s_tyre_sev[TYRE_COUNT];
+static tyre_severity_t s_slip_sev[TYRE_COUNT];  // fed back each loop -- hysteresis state
+static tyre_warn_state_t s_tyre_warn;
+static bool s_tyre_warning_now;
+
 void ui_vars_refresh(uint32_t now_ms)
 {
     model_snapshot(&s_snap);
@@ -56,6 +66,68 @@ void ui_vars_refresh(uint32_t now_ms)
     bool ra60_lost = s_snap.aux_timeout || s_snap.aux_fault;
     s_comms_text = can_lost && ra60_lost ? "BOTH" : can_lost ? "CAN" : ra60_lost ? "RA60" : "";
 
+    // Tyres: per-wheel pressure severity and "psi" text (docs/ui-tyres-4wd-spec.md 5, 6.1).
+    for (int pos = 0; pos < TYRE_COUNT; pos++) {
+        bool front = (pos == TYRE_FL || pos == TYRE_FR);
+        int caution = front ? CONFIG_TYRE_CAUTION_PSI_FRONT : CONFIG_TYRE_CAUTION_PSI_REAR;
+        int alert   = front ? CONFIG_TYRE_ALERT_PSI_FRONT   : CONFIG_TYRE_ALERT_PSI_REAR;
+        s_tyre_sev[pos] = tyre_pressure_severity(s_snap.tyre_pressures.raw[pos], s_snap.tyre_pressures.stale, caution, alert);
+        if (s_tyre_sev[pos] == TYRE_SEV_NODATA) {
+            snprintf(s_tyre_text[pos], sizeof(s_tyre_text[pos]), "--");
+        } else {
+            snprintf(s_tyre_text[pos], sizeof(s_tyre_text[pos]), "%d", tyre_psi(s_snap.tyre_pressures.raw[pos]));
+        }
+    }
+
+    // Wheel slip: gated by speed, referenced to the median of all four.
+    bool slip_gate = wheel_slip_gate_open(&s_snap.wheel_speeds, CONFIG_SLIP_SPEED_GATE_CENTI_KMH);
+    uint16_t slip_ref = slip_gate ? wheel_speed_median(s_snap.wheel_speeds.raw) : 0;
+    for (int pos = 0; pos < TYRE_COUNT; pos++) {
+        if (!slip_gate) {
+            s_slip_sev[pos] = TYRE_SEV_NODATA;
+            snprintf(s_slip_text[pos], sizeof(s_slip_text[pos]), "--");
+            continue;
+        }
+        int pct = wheel_slip_pct(s_snap.wheel_speeds.raw[pos], slip_ref);
+        // wheel_slip_pct() already clamps to -99..99, but that's invisible
+        // to the compiler across the function-call boundary; repeat the
+        // clamp here so -Wformat-truncation can see the real bound on pct.
+        if (pct > 99) {
+            pct = 99;
+        } else if (pct < -99) {
+            pct = -99;
+        }
+        s_slip_sev[pos] = wheel_slip_severity(s_slip_sev[pos], false, pct < 0 ? -pct : pct,
+                                               CONFIG_SLIP_CAUTION_PCT, CONFIG_SLIP_ALERT_PCT, CONFIG_SLIP_HYSTERESIS_PCT);
+        if (pct > 0) {
+            snprintf(s_slip_text[pos], sizeof(s_slip_text[pos]), "+%d%%", pct);
+        } else {
+            snprintf(s_slip_text[pos], sizeof(s_slip_text[pos]), "%d%%", pct);
+        }
+    }
+
+    // 4WD header/footer (OQ-27: selector, not operating mode).
+    if (s_snap.etc.stale || s_snap.etc.selector == 3) {
+        snprintf(s_wd_mode, sizeof(s_wd_mode), "--");
+    } else {
+        static const char *names[3] = { "AUTO", "LOCK", "2WD" };
+        snprintf(s_wd_mode, sizeof(s_wd_mode), "%s", names[s_snap.etc.selector]);
+    }
+    if (s_snap.etc.stale) {
+        snprintf(s_wd_torque, sizeof(s_wd_torque), "-- Nm");
+    } else {
+        snprintf(s_wd_torque, sizeof(s_wd_torque), "%u Nm", s_snap.etc.torque_nm);
+    }
+
+    // Speedo tyre-warning icon (section 9), debounced.
+    tyre_psi_cfg_t psi_cfg = {
+        .caution_psi_front = CONFIG_TYRE_CAUTION_PSI_FRONT, .alert_psi_front = CONFIG_TYRE_ALERT_PSI_FRONT,
+        .caution_psi_rear  = CONFIG_TYRE_CAUTION_PSI_REAR,  .alert_psi_rear  = CONFIG_TYRE_ALERT_PSI_REAR,
+    };
+    bool warn_condition = tyre_warning_condition(&s_snap.tyre_pressures, &psi_cfg);
+    s_tyre_warning_now = tyre_warn_update(&s_tyre_warn, warn_condition, now_ms,
+                                          CONFIG_TYRE_WARN_SET_MS, CONFIG_TYRE_WARN_CLEAR_MS);
+
     s_started = true;
 }
 
@@ -63,6 +135,9 @@ const ui_model_t *ui_vars_model(void)
 {
     return &s_snap;
 }
+
+tyre_severity_t ui_vars_tyre_pressure_severity(tyre_pos_t pos) { return s_tyre_sev[pos]; }
+tyre_severity_t ui_vars_wheel_slip_severity(tyre_pos_t pos) { return s_slip_sev[pos]; }
 
 const char *get_var_speed(void) { return s_speed; }
 const char *get_var_temperature(void) { return s_temp; }
@@ -77,6 +152,18 @@ bool get_var_is_dtc_present(void) { return s_snap.dtc.count > 0 || s_snap.dtc.mi
 const char *get_var_dtc_count(void) { return s_dtc_count; }
 bool get_var_is_comms_lost(void) { return s_comms_text[0] != '\0'; }
 const char *get_var_comms_text(void) { return s_comms_text; }
+
+const char *get_var_tyre_fl_text(void) { return s_tyre_text[TYRE_FL]; }
+const char *get_var_tyre_fr_text(void) { return s_tyre_text[TYRE_FR]; }
+const char *get_var_tyre_rl_text(void) { return s_tyre_text[TYRE_RL]; }
+const char *get_var_tyre_rr_text(void) { return s_tyre_text[TYRE_RR]; }
+const char *get_var_slip_fl_text(void) { return s_slip_text[TYRE_FL]; }
+const char *get_var_slip_fr_text(void) { return s_slip_text[TYRE_FR]; }
+const char *get_var_slip_rl_text(void) { return s_slip_text[TYRE_RL]; }
+const char *get_var_slip_rr_text(void) { return s_slip_text[TYRE_RR]; }
+const char *get_var_wd_mode_text(void) { return s_wd_mode; }
+const char *get_var_wd_torque_text(void) { return s_wd_torque; }
+bool get_var_is_tyre_warning(void) { return s_tyre_warning_now; }
 
 static void ignored(const char *name)
 {
@@ -94,3 +181,15 @@ void set_var_is_dtc_present(bool value) { (void)value; ignored("is_dtc_present")
 void set_var_dtc_count(const char *value) { (void)value; ignored("dtc_count"); }
 void set_var_is_comms_lost(bool value) { (void)value; ignored("is_comms_lost"); }
 void set_var_comms_text(const char *value) { (void)value; ignored("comms_text"); }
+
+void set_var_tyre_fl_text(const char *value) { (void)value; ignored("tyre_fl_text"); }
+void set_var_tyre_fr_text(const char *value) { (void)value; ignored("tyre_fr_text"); }
+void set_var_tyre_rl_text(const char *value) { (void)value; ignored("tyre_rl_text"); }
+void set_var_tyre_rr_text(const char *value) { (void)value; ignored("tyre_rr_text"); }
+void set_var_slip_fl_text(const char *value) { (void)value; ignored("slip_fl_text"); }
+void set_var_slip_fr_text(const char *value) { (void)value; ignored("slip_fr_text"); }
+void set_var_slip_rl_text(const char *value) { (void)value; ignored("slip_rl_text"); }
+void set_var_slip_rr_text(const char *value) { (void)value; ignored("slip_rr_text"); }
+void set_var_wd_mode_text(const char *value) { (void)value; ignored("wd_mode_text"); }
+void set_var_wd_torque_text(const char *value) { (void)value; ignored("wd_torque_text"); }
+void set_var_is_tyre_warning(bool value) { (void)value; ignored("is_tyre_warning"); }

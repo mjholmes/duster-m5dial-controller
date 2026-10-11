@@ -12,6 +12,10 @@ typedef enum {
     CAN_SIG_TEMP,         // 0x3B7 AMBIENT_TEMP
     CAN_SIG_LIGHTS,       // 0x5DE LIGHTS
     CAN_SIG_IGNITION,     // 0x350 IGNITION_STATUS
+    CAN_SIG_TPMS,              // 0x673 TPMS_PRESSURES
+    CAN_SIG_WHEEL_SPEED_FRONT, // 0x29A WHEEL_SPEED_FRONT
+    CAN_SIG_WHEEL_SPEED_REAR,  // 0x29C WHEEL_SPEED_REAR
+    CAN_SIG_ETC,               // 0x1AA ETC_STATUS
     CAN_SIG_COUNT
 } can_sig_t;
 
@@ -32,6 +36,27 @@ typedef struct {
         int8_t ext_temp_c;
         vehicle_lights_t lights;
         uint8_t ignition_raw;         // 0xC3..0xC7
+        struct {
+            uint8_t pressure_raw[TYRE_COUNT]; // tyre_pos_t index; raw x 30 = mbar, 0xFF = no value
+            uint8_t state[TYRE_COUNT];        // tyre_pos_t index; 3-bit wheel state (0 OK, 1 no info, 5 flat, 6 under-inflated)
+            bool    failure;                  // TpmsFailureWarning
+        } tpms;
+        struct {
+            uint16_t fl_raw;                  // x 0.0417 = rpm
+            uint16_t fr_raw;
+            uint16_t speed_raw_centi_kmh;      // 0.01 km/h per bit, same value as CAN_SIG_SPEED
+        } wheel_speed_front;
+        struct {
+            uint16_t rl_raw;                  // x 0.0417 = rpm
+            uint16_t rr_raw;
+        } wheel_speed_rear;
+        struct {
+            uint16_t torque_nm;
+            uint8_t  coupler;   // 0 open, 1 sliding, 2 closed, 3 unavailable
+            uint8_t  mode;      // 0 auto, 1 fixed 4WD, 2 fixed 2WD, 3 unavailable
+            uint8_t  selector;  // 0 AUTO, 1 LOCK, 2 2WD, 3 unavailable
+            bool     failure;
+        } etc;
     };
 } can_decoded_t;
 

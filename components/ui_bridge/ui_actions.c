@@ -56,3 +56,52 @@ void action_switchto_screen_speedo(lv_event_t *e)
     switch_to(objects.speedo, SCREEN_ID_SPEEDO);
 }
 
+// Screen ring (docs/ui-tyres-4wd-spec.md 10, supersedes per-screen gesture
+// actions in SPEC 9.3): every screen's GESTURE event calls this one action.
+// Adding a future screen means adding one row here.
+static const struct { lv_obj_t **obj; enum ScreensEnum id; } s_nav_ring[] = {
+    { &objects.speedo,          SCREEN_ID_SPEEDO },
+    { &objects.manual,          SCREEN_ID_MANUAL },
+    { &objects.tyre_pressures,  SCREEN_ID_TYRE_PRESSURES },
+    { &objects.wheels_and_diff, SCREEN_ID_WHEELS_AND_DIFF },
+};
+#define NAV_RING_COUNT (int)(sizeof(s_nav_ring) / sizeof(s_nav_ring[0]))
+
+void action_nav_gesture(lv_event_t *e)
+{
+    (void)e;
+    lv_dir_t dir = lv_indev_get_gesture_dir(lv_indev_active());
+
+    // OQ-28: swipe left = next screen, swipe right = previous; the ring
+    // wraps at both ends; up/down (and no gesture) are ignored.
+    int step;
+    if (dir == LV_DIR_LEFT) {
+        step = 1;
+    } else if (dir == LV_DIR_RIGHT) {
+        step = -1;
+    } else {
+        return;
+    }
+
+    lv_obj_t *active = lv_display_get_screen_active(lv_display_get_default());
+    int current = -1;
+    for (int i = 0; i < NAV_RING_COUNT; i++) {
+        if (*s_nav_ring[i].obj == active) {
+            current = i;
+            break;
+        }
+    }
+    if (current < 0) {
+        return;  // active screen not in the ring: do nothing
+    }
+
+    int next = (current + step + NAV_RING_COUNT) % NAV_RING_COUNT;
+    switch_to(*s_nav_ring[next].obj, s_nav_ring[next].id);
+}
+
+void action_switchto_screen_tyres(lv_event_t *e)
+{
+    (void)e;
+    switch_to(objects.tyre_pressures, SCREEN_ID_TYRE_PRESSURES);
+}
+

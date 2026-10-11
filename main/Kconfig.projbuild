@@ -221,4 +221,74 @@ menu "Duster controller"
             default 150
     endmenu
 
+    menu "Tyres / 4WD"
+        config TPMS_STALE_MS
+            int "TPMS pressures stale timeout, 0x673 (ms)"
+            default 750
+            help
+                docs/ui-tyres-4wd-spec.md 4 (OQ-14 convention). Stale/no-value
+                is normal, not a fault -- display only, never raises
+                can_timeout. 0xFF values are expected for about 30 s after
+                moving off.
+
+        config WHEEL_SPEED_STALE_MS
+            int "Wheel speed stale timeout, 0x29A/0x29C (ms)"
+            default 750
+
+        config ETC_STALE_MS
+            int "4WD/ETC status stale timeout, 0x1AA (ms)"
+            default 750
+
+        config TYRE_CAUTION_PSI_FRONT
+            int "Front tyre caution threshold (psi, below)"
+            default 27
+            help
+                docs/ui-tyres-4wd-spec.md 5, OQ-23. Placeholder pending the
+                car's placard pressures.
+
+        config TYRE_CAUTION_PSI_REAR
+            int "Rear tyre caution threshold (psi, below)"
+            default 27
+
+        config TYRE_ALERT_PSI_FRONT
+            int "Front tyre alert threshold (psi, below)"
+            default 23
+
+        config TYRE_ALERT_PSI_REAR
+            int "Rear tyre alert threshold (psi, below)"
+            default 23
+
+        config SLIP_CAUTION_PCT
+            int "Wheel slip caution threshold (%, absolute)"
+            default 5
+            help
+                docs/ui-tyres-4wd-spec.md 5, OQ-25. Placeholder pending a
+                drive on a loose surface.
+
+        config SLIP_ALERT_PCT
+            int "Wheel slip alert threshold (%, absolute)"
+            default 10
+
+        config SLIP_HYSTERESIS_PCT
+            int "Wheel slip severity hysteresis (%, falling only)"
+            default 2
+
+        config SLIP_SPEED_GATE_CENTI_KMH
+            int "Minimum speed to compute wheel slip (0.01 km/h)"
+            default 300
+            help
+                300 = 3 km/h. Below this, all four show NODATA / "--".
+
+        config TYRE_WARN_SET_MS
+            int "Speedo tyre-warning icon: raise after condition holds (ms)"
+            default 2000
+            help
+                docs/ui-tyres-4wd-spec.md 9, OQ-30. Debounces the 30 mbar
+                TPMS step size near a threshold.
+
+        config TYRE_WARN_CLEAR_MS
+            int "Speedo tyre-warning icon: clear after condition clear (ms)"
+            default 10000
+    endmenu
+
 endmenu

@@ -18,6 +18,13 @@ void control_can_ignition(uint8_t raw);
 void control_can_lights(vehicle_lights_t lights, bool changed, uint32_t rx_ms);
 void control_can_bus_off(bool bus_off);
 
+// Tyres / 4WD (docs/ui-tyres-4wd-spec.md 3-4). Raw decoded values go straight
+// into the model; staleness is computed in publish() like speed/temp.
+void control_can_tpms(const uint8_t pressure_raw[TYRE_COUNT], const uint8_t state[TYRE_COUNT], bool failure, uint32_t rx_ms);
+void control_can_wheel_speed_front(uint16_t fl_raw, uint16_t fr_raw, uint16_t speed_centi_kmh, uint32_t rx_ms);
+void control_can_wheel_speed_rear(uint16_t rl_raw, uint16_t rr_raw, uint32_t rx_ms);
+void control_can_etc(uint16_t torque_nm, uint8_t coupler, uint8_t mode, uint8_t selector, bool failure, uint32_t rx_ms);
+
 // RA60 link (SPEC 7.2), used only by the aux task. Newest commanded target
 // since the last call, if any; and ACKed / failed results back to control.
 bool control_aux_take_target(aux_lights_t *out);

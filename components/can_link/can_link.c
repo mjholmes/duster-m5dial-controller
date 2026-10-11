@@ -221,6 +221,19 @@ static void handle_frame(const can_rx_frame_t *f, uint32_t now)
         control_can_lights(d.lights, changed, now);
         break;
     }
+    case CAN_SIG_TPMS:
+        control_can_tpms(d.tpms.pressure_raw, d.tpms.state, d.tpms.failure, now);
+        break;
+    case CAN_SIG_WHEEL_SPEED_FRONT:
+        control_can_wheel_speed_front(d.wheel_speed_front.fl_raw, d.wheel_speed_front.fr_raw,
+                                       d.wheel_speed_front.speed_raw_centi_kmh, now);
+        break;
+    case CAN_SIG_WHEEL_SPEED_REAR:
+        control_can_wheel_speed_rear(d.wheel_speed_rear.rl_raw, d.wheel_speed_rear.rr_raw, now);
+        break;
+    case CAN_SIG_ETC:
+        control_can_etc(d.etc.torque_nm, d.etc.coupler, d.etc.mode, d.etc.selector, d.etc.failure, now);
+        break;
     default:
         break;
     }

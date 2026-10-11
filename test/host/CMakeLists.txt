@@ -10,6 +10,7 @@ add_executable(host_tests
     ${ROOT}/components/control/control_core.c
     ${ROOT}/components/ui_bridge/button_fsm.c
     ${ROOT}/components/ui_bridge/brightness.c
+    ${ROOT}/components/ui_bridge/tyre_logic.c
     ${ROOT}/components/can_link/can_signals.c
     test_obd.c
     ${ROOT}/components/obd/isotp_rx.c
