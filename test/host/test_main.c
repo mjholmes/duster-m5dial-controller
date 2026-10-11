@@ -379,18 +379,26 @@ static void test_tyre_logic(void)
     // psi vector, docs/ui-tyres-4wd-spec.md 3.5: 0x3C->26, 0x52->36, 0x3E->27, 0x36->23.
     CHECK(tyre_psi(0x3C) == 26 && tyre_psi(0x52) == 36 && tyre_psi(0x3E) == 27 && tyre_psi(0x36) == 23);
 
-    // Pressure severity: default thresholds, both axles caution 27 / alert 23.
-    CHECK(tyre_pressure_severity(0xFF, false, 27, 23) == TYRE_SEV_NODATA);  // no value
-    CHECK(tyre_pressure_severity(0x3C, true, 27, 23) == TYRE_SEV_NODATA);   // stale
-    CHECK(tyre_pressure_severity(0x32, false, 27, 23) == TYRE_SEV_ALERT);   // 22 psi, below alert
-    CHECK(tyre_pressure_severity(0x36, false, 27, 23) == TYRE_SEV_CAUTION); // 23 psi: not < alert, < caution
-    CHECK(tyre_pressure_severity(0x3C, false, 27, 23) == TYRE_SEV_CAUTION); // 26 psi
-    CHECK(tyre_pressure_severity(0x3E, false, 27, 23) == TYRE_SEV_OK);      // 27 psi: not < caution
+    // Pressure severity: thresholds caution 27/under, alert 23/under,
+    // caution 33/over, alert 35/over (matches the Kconfig defaults).
+    CHECK(tyre_pressure_severity(0xFF, false, 27, 23, 33, 35) == TYRE_SEV_NODATA);  // no value
+    CHECK(tyre_pressure_severity(0x3C, true, 27, 23, 33, 35) == TYRE_SEV_NODATA);   // stale
+    CHECK(tyre_pressure_severity(0x32, false, 27, 23, 33, 35) == TYRE_SEV_ALERT);   // 22 psi, below alert
+    CHECK(tyre_pressure_severity(0x36, false, 27, 23, 33, 35) == TYRE_SEV_CAUTION); // 23 psi: not < alert, < caution
+    CHECK(tyre_pressure_severity(0x3C, false, 27, 23, 33, 35) == TYRE_SEV_CAUTION); // 26 psi
+    CHECK(tyre_pressure_severity(0x3E, false, 27, 23, 33, 35) == TYRE_SEV_OK);      // 27 psi: not < caution, not > caution_over
+    // Over-inflation (the bug an on-car test caught: 36 psi showed as OK
+    // with no upper bound at all).
+    CHECK(tyre_pressure_severity(0x4A, false, 27, 23, 33, 35) == TYRE_SEV_OK);      // 32 psi: not > caution_over (33)
+    CHECK(tyre_pressure_severity(0x4B, false, 27, 23, 33, 35) == TYRE_SEV_OK);      // 33 psi: not > caution_over (strict)
+    CHECK(tyre_pressure_severity(0x4D, false, 27, 23, 33, 35) == TYRE_SEV_CAUTION); // 34 psi: > caution_over, not > alert_over
+    CHECK(tyre_pressure_severity(0x52, false, 27, 23, 33, 35) == TYRE_SEV_ALERT);   // 36 psi: > alert_over (35)
 
     // tyre_warning_condition: the spec's own 0x673 vector (RR 26, RL 36, FR 27, FL 23 psi)
-    // with default thresholds -> RR and FL are CAUTION, so it must raise.
+    // with default thresholds -> RR and FL are CAUTION (under), RL is ALERT (over), so it must raise.
     tyre_pressures_t tp = { .raw = { [TYRE_FL] = 0x36, [TYRE_FR] = 0x3E, [TYRE_RL] = 0x52, [TYRE_RR] = 0x3C } };
-    tyre_psi_cfg_t psi_cfg = { .caution_psi_front = 27, .alert_psi_front = 23, .caution_psi_rear = 27, .alert_psi_rear = 23 };
+    tyre_psi_axle_cfg_t axle_cfg = { .caution_under_psi = 27, .alert_under_psi = 23, .caution_over_psi = 33, .alert_over_psi = 35 };
+    tyre_psi_cfg_t psi_cfg = { .front = axle_cfg, .rear = axle_cfg };
     CHECK(tyre_warning_condition(&tp, &psi_cfg));
 
     tyre_pressures_t tp_stale = tp;
@@ -399,6 +407,10 @@ static void test_tyre_logic(void)
 
     tyre_pressures_t tp_ok = { .raw = { [TYRE_FL] = 0x3E, [TYRE_FR] = 0x3E, [TYRE_RL] = 0x3E, [TYRE_RR] = 0x3E } };
     CHECK(!tyre_warning_condition(&tp_ok, &psi_cfg));  // all 27 psi: OK, no flat/failure
+
+    tyre_pressures_t tp_overinflated = tp_ok;
+    tp_overinflated.raw[TYRE_RR] = 0x52;  // 36 psi, same wheel the on-car test flagged
+    CHECK(tyre_warning_condition(&tp_overinflated, &psi_cfg));
 
     tyre_pressures_t tp_flat = tp_ok;
     tp_flat.state[TYRE_RL] = 5;  // flat, even though pressure itself reads OK

@@ -11,15 +11,25 @@ typedef enum { TYRE_SEV_NODATA = 0, TYRE_SEV_OK, TYRE_SEV_CAUTION, TYRE_SEV_ALER
 // raw x 30 mbar -> psi, rounded. Caller checks 0xFF (no value) separately.
 int tyre_psi(uint8_t raw);
 
-// NODATA if stale or raw is 0xFF; else by psi against the two thresholds.
-// No hysteresis -- the spec applies hysteresis only to wheel slip (below).
-tyre_severity_t tyre_pressure_severity(uint8_t raw, bool stale, int caution_psi, int alert_psi);
+// NODATA if stale or raw is 0xFF; else by psi against the four thresholds --
+// both under- and over-inflation warn (added after an on-car test showed a
+// 36 psi tyre reading OK; the original spec text only ever defined a lower
+// bound). No hysteresis -- the spec applies hysteresis only to wheel slip
+// (below).
+tyre_severity_t tyre_pressure_severity(uint8_t raw, bool stale,
+                                        int caution_under_psi, int alert_under_psi,
+                                        int caution_over_psi, int alert_over_psi);
 
 typedef struct {
-    int caution_psi_front;
-    int alert_psi_front;
-    int caution_psi_rear;
-    int alert_psi_rear;
+    int caution_under_psi;
+    int alert_under_psi;
+    int caution_over_psi;
+    int alert_over_psi;
+} tyre_psi_axle_cfg_t;
+
+typedef struct {
+    tyre_psi_axle_cfg_t front;
+    tyre_psi_axle_cfg_t rear;
 } tyre_psi_cfg_t;
 
 // The instantaneous (pre-debounce) Speedo tyre-warning condition: any wheel's

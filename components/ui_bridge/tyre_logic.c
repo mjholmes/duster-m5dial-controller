@@ -5,16 +5,18 @@ int tyre_psi(uint8_t raw)
     return ((int)raw * 4351 + 5000) / 10000;
 }
 
-tyre_severity_t tyre_pressure_severity(uint8_t raw, bool stale, int caution_psi, int alert_psi)
+tyre_severity_t tyre_pressure_severity(uint8_t raw, bool stale,
+                                        int caution_under_psi, int alert_under_psi,
+                                        int caution_over_psi, int alert_over_psi)
 {
     if (stale || raw == 0xFF) {
         return TYRE_SEV_NODATA;
     }
     int psi = tyre_psi(raw);
-    if (psi < alert_psi) {
+    if (psi < alert_under_psi || psi > alert_over_psi) {
         return TYRE_SEV_ALERT;
     }
-    if (psi < caution_psi) {
+    if (psi < caution_under_psi || psi > caution_over_psi) {
         return TYRE_SEV_CAUTION;
     }
     return TYRE_SEV_OK;
@@ -24,9 +26,10 @@ bool tyre_warning_condition(const tyre_pressures_t *tp, const tyre_psi_cfg_t *cf
 {
     for (int pos = 0; pos < TYRE_COUNT; pos++) {
         bool front = (pos == TYRE_FL || pos == TYRE_FR);
-        int caution = front ? cfg->caution_psi_front : cfg->caution_psi_rear;
-        int alert   = front ? cfg->alert_psi_front   : cfg->alert_psi_rear;
-        tyre_severity_t sev = tyre_pressure_severity(tp->raw[pos], tp->stale, caution, alert);
+        const tyre_psi_axle_cfg_t *axle = front ? &cfg->front : &cfg->rear;
+        tyre_severity_t sev = tyre_pressure_severity(tp->raw[pos], tp->stale,
+                                                      axle->caution_under_psi, axle->alert_under_psi,
+                                                      axle->caution_over_psi, axle->alert_over_psi);
         if (sev == TYRE_SEV_NODATA) {
             continue;  // stale or no value never raises it (section 9)
         }

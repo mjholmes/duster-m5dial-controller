@@ -666,6 +666,7 @@ void create_screen_tyre_pressures() {
     lv_obj_set_pos(obj, 0, 0);
     lv_obj_set_size(obj, 240, 240);
     lv_obj_add_event_cb(obj, action_nav_gesture, LV_EVENT_GESTURE, (void *)0);
+    lv_obj_set_style_bg_color(obj, lv_color_hex(0x1a1a1a), LV_PART_MAIN | LV_STATE_DEFAULT);
     {
         lv_obj_t *parent_obj = obj;
         {
@@ -946,6 +947,7 @@ void create_screen_wheels_and_diff() {
     lv_obj_set_pos(obj, 0, 0);
     lv_obj_set_size(obj, 240, 240);
     lv_obj_add_event_cb(obj, action_nav_gesture, LV_EVENT_GESTURE, (void *)0);
+    lv_obj_set_style_bg_color(obj, lv_color_hex(0x1a1a1a), LV_PART_MAIN | LV_STATE_DEFAULT);
     {
         lv_obj_t *parent_obj = obj;
         {

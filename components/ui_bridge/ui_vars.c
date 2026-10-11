@@ -67,11 +67,19 @@ void ui_vars_refresh(uint32_t now_ms)
     s_comms_text = can_lost && ra60_lost ? "BOTH" : can_lost ? "CAN" : ra60_lost ? "RA60" : "";
 
     // Tyres: per-wheel pressure severity and "psi" text (docs/ui-tyres-4wd-spec.md 5, 6.1).
+    // Both under- and over-inflation warn -- see tyre_logic.h.
+    static const tyre_psi_cfg_t psi_cfg = {
+        .front = { .caution_under_psi = CONFIG_TYRE_CAUTION_PSI_FRONT, .alert_under_psi = CONFIG_TYRE_ALERT_PSI_FRONT,
+                   .caution_over_psi  = CONFIG_TYRE_OVER_CAUTION_PSI_FRONT, .alert_over_psi = CONFIG_TYRE_OVER_ALERT_PSI_FRONT },
+        .rear  = { .caution_under_psi = CONFIG_TYRE_CAUTION_PSI_REAR,  .alert_under_psi = CONFIG_TYRE_ALERT_PSI_REAR,
+                   .caution_over_psi  = CONFIG_TYRE_OVER_CAUTION_PSI_REAR,  .alert_over_psi = CONFIG_TYRE_OVER_ALERT_PSI_REAR },
+    };
     for (int pos = 0; pos < TYRE_COUNT; pos++) {
         bool front = (pos == TYRE_FL || pos == TYRE_FR);
-        int caution = front ? CONFIG_TYRE_CAUTION_PSI_FRONT : CONFIG_TYRE_CAUTION_PSI_REAR;
-        int alert   = front ? CONFIG_TYRE_ALERT_PSI_FRONT   : CONFIG_TYRE_ALERT_PSI_REAR;
-        s_tyre_sev[pos] = tyre_pressure_severity(s_snap.tyre_pressures.raw[pos], s_snap.tyre_pressures.stale, caution, alert);
+        const tyre_psi_axle_cfg_t *axle = front ? &psi_cfg.front : &psi_cfg.rear;
+        s_tyre_sev[pos] = tyre_pressure_severity(s_snap.tyre_pressures.raw[pos], s_snap.tyre_pressures.stale,
+                                                  axle->caution_under_psi, axle->alert_under_psi,
+                                                  axle->caution_over_psi, axle->alert_over_psi);
         if (s_tyre_sev[pos] == TYRE_SEV_NODATA) {
             snprintf(s_tyre_text[pos], sizeof(s_tyre_text[pos]), "--");
         } else {
@@ -119,11 +127,7 @@ void ui_vars_refresh(uint32_t now_ms)
         snprintf(s_wd_torque, sizeof(s_wd_torque), "%u Nm", s_snap.etc.torque_nm);
     }
 
-    // Speedo tyre-warning icon (section 9), debounced.
-    tyre_psi_cfg_t psi_cfg = {
-        .caution_psi_front = CONFIG_TYRE_CAUTION_PSI_FRONT, .alert_psi_front = CONFIG_TYRE_ALERT_PSI_FRONT,
-        .caution_psi_rear  = CONFIG_TYRE_CAUTION_PSI_REAR,  .alert_psi_rear  = CONFIG_TYRE_ALERT_PSI_REAR,
-    };
+    // Speedo tyre-warning icon (section 9), debounced. Reuses psi_cfg above.
     bool warn_condition = tyre_warning_condition(&s_snap.tyre_pressures, &psi_cfg);
     s_tyre_warning_now = tyre_warn_update(&s_tyre_warn, warn_condition, now_ms,
                                           CONFIG_TYRE_WARN_SET_MS, CONFIG_TYRE_WARN_CLEAR_MS);

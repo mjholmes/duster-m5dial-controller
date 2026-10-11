@@ -258,6 +258,28 @@ menu "Duster controller"
             int "Rear tyre alert threshold (psi, below)"
             default 23
 
+        config TYRE_OVER_CAUTION_PSI_FRONT
+            int "Front tyre over-inflation caution threshold (psi, above)"
+            default 33
+            help
+                Added after an on-car test showed a 36 psi tyre reading OK
+                with no over-inflation check at all -- the spec text only
+                ever defined a lower bound. Placeholder pending the car's
+                placard pressures, same as the under-inflation thresholds
+                above.
+
+        config TYRE_OVER_CAUTION_PSI_REAR
+            int "Rear tyre over-inflation caution threshold (psi, above)"
+            default 33
+
+        config TYRE_OVER_ALERT_PSI_FRONT
+            int "Front tyre over-inflation alert threshold (psi, above)"
+            default 35
+
+        config TYRE_OVER_ALERT_PSI_REAR
+            int "Rear tyre over-inflation alert threshold (psi, above)"
+            default 35
+
         config SLIP_CAUTION_PCT
             int "Wheel slip caution threshold (%, absolute)"
             default 5
