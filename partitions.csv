@@ -1,5 +1,8 @@
 # Name,   Type, SubType, Offset,  Size
-# 8 MB flash. Single 3 MB app (no OTA in Phase 1, SPEC 2).
+# 8 MB flash. OTA-capable: two 2 MB app slots (docs/ota-update-spec.md 4.1).
+# ota_0/ota_1 end at 0x420000 (4.125 MB), leaving ~3.9 MB unused headroom.
 nvs,      data, nvs,     0x9000,  0x6000
-phy_init, data, phy,     0xf000,  0x1000
-factory,  app,  factory, 0x10000, 3M
+otadata,  data, ota,     0xf000,  0x2000
+phy_init, data, phy,     0x11000, 0x1000
+ota_0,    app,  ota_0,   0x20000, 0x200000
+ota_1,    app,  ota_1,   0x220000, 0x200000

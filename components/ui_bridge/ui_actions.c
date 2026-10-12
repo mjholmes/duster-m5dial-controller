@@ -4,6 +4,9 @@
 #include "actions.h"
 #include "ui.h"
 #include "control.h"
+#include "settings.h"
+#include "ui_vars.h"
+#include "ota_client.h"
 
 static void request_toggle(aux_light_id_t light)
 {
@@ -64,6 +67,7 @@ static const struct { lv_obj_t **obj; enum ScreensEnum id; } s_nav_ring[] = {
     { &objects.manual,          SCREEN_ID_MANUAL },
     { &objects.tyre_pressures,  SCREEN_ID_TYRE_PRESSURES },
     { &objects.wheels_and_diff, SCREEN_ID_WHEELS_AND_DIFF },
+    { &objects.wi_fi_ota,       SCREEN_ID_WI_FI_OTA },
 };
 #define NAV_RING_COUNT (int)(sizeof(s_nav_ring) / sizeof(s_nav_ring[0]))
 
@@ -103,5 +107,32 @@ void action_switchto_screen_tyres(lv_event_t *e)
 {
     (void)e;
     switch_to(objects.tyre_pressures, SCREEN_ID_TYRE_PRESSURES);
+}
+
+// OTA (docs/ota-update-spec.md 7). Channel choice is real and persists
+// (settings.c); check/install don't exist yet (that spec's sections 1-6),
+// so the action button just reports that.
+void action_action_ota_select_stable(lv_event_t *e)
+{
+    (void)e;
+    settings_set_ota_beta_channel(false);
+}
+
+void action_action_ota_select_beta(lv_event_t *e)
+{
+    (void)e;
+    settings_set_ota_beta_channel(true);
+}
+
+// docs/ota-update-spec.md 8: one button drives both steps 1-2 (connect +
+// check) and, once an update is found, steps 3-6 (confirm + install).
+void action_action_ota_button_pressed(lv_event_t *e)
+{
+    (void)e;
+    if (ota_client_get_state() == OTA_CLIENT_UPDATE_AVAILABLE) {
+        ota_client_request_install();
+    } else {
+        ota_client_request_check();
+    }
 }
 

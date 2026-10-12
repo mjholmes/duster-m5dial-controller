@@ -8,12 +8,15 @@
 #include "aux_link.h"
 #include "obd_client.h"
 #include "health.h"
+#include "wifi_link.h"
+#include "ota_client.h"
 #include "driver/gpio.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
+#include "esp_ota_ops.h"
 
 static const char *TAG = "main";
 
@@ -37,8 +40,23 @@ void app_main(void)
     ESP_ERROR_CHECK(settings_init());
     ESP_ERROR_CHECK(control_start());
     ESP_ERROR_CHECK(can_link_start());
+
+    // Self-test (docs/ota-update-spec.md 8 step 7): TWAI and the display
+    // are confirmed working by the two ESP_ERROR_CHECK calls above having
+    // not aborted. No separate 60 s timer is needed -- this point is
+    // reached synchronously, within a second of boot, and the existing
+    // 3 s task watchdog (SPEC 5) already forces a reset (and so a
+    // rollback, while still pending-verify) on anything that hangs before
+    // it.
+    esp_err_t mark_err = esp_ota_mark_app_valid_cancel_rollback();
+    if (mark_err != ESP_OK) {
+        ESP_LOGW(TAG, "mark app valid failed: %s", esp_err_to_name(mark_err));
+    }
+
     ESP_ERROR_CHECK(aux_link_start());
     ESP_ERROR_CHECK(obd_client_start());
+    ESP_ERROR_CHECK(wifi_link_start());
+    ESP_ERROR_CHECK(ota_client_start());
     ESP_ERROR_CHECK(ui_bridge_start());
 
     vTaskDelay(pdMS_TO_TICKS(2000));

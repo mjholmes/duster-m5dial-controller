@@ -162,6 +162,55 @@ menu "Duster controller"
             default 1000
     endmenu
 
+    menu "Wi-Fi / OTA"
+        config WIFI_CONNECT_TIMEOUT_MS
+            int "Wi-Fi connect timeout (ms)"
+            default 20000
+            help
+                docs/ota-update-spec.md 3.1. On timeout, the connect attempt
+                is abandoned and Wi-Fi is stopped.
+
+        config DUSTER_WIFI_DEFAULT_SSID
+            string "Build-time default Wi-Fi SSID (local builds only, empty = off)"
+            default ""
+            help
+                docs/ota-update-spec.md 3.2. Used only if NVS has no stored
+                credentials. Must be empty in the committed
+                sdkconfig.defaults -- set only in a local, git-ignored
+                sdkconfig for bench builds.
+
+        config DUSTER_WIFI_DEFAULT_PSK
+            string "Build-time default Wi-Fi PSK (local builds only, empty = off)"
+            default ""
+            help
+                Paired with DUSTER_WIFI_DEFAULT_SSID above. Same rule:
+                release binaries are public, so this must stay empty in
+                sdkconfig.defaults.
+
+        config OTA_MANIFEST_URL
+            string "OTA manifest URL (empty = not configured)"
+            default ""
+            help
+                docs/ota-update-spec.md 6.2. Empty by default -- the real
+                GitHub Pages URL isn't live yet (OQ-34, repo still
+                private). Set locally to a bench-hosted test manifest
+                (e.g. http://<laptop-lan-ip>:8000/manifest.json) for
+                13 step 4; not meant to be set in the committed
+                sdkconfig.defaults until the repo goes public.
+
+        config OTA_HTTP_BUFFER_SIZE
+            int "esp_http_client RX buffer size for OTA (bytes)"
+            default 2048
+            help
+                docs/ota-update-spec.md 10: GitHub's release-asset redirect
+                uses a long signed URL: the default buffer can be too
+                small to hold the response headers.
+
+        config OTA_HTTP_BUFFER_SIZE_TX
+            int "esp_http_client TX buffer size for OTA (bytes)"
+            default 1024
+    endmenu
+
     menu "CAN / OBD"
         config CAN_LISTEN_ONLY
             bool "TWAI listen-only mode (no ACKs, no OBD requests)"

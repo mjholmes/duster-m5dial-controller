@@ -9,5 +9,5 @@ idf_component_register(
     INCLUDE_DIRS "include"
     PRIV_INCLUDE_DIRS "${EEZ_UI_DIR}"
     REQUIRES control
-    PRIV_REQUIRES board_m5dial settings health esp_timer
+    PRIV_REQUIRES board_m5dial settings health esp_timer esp_app_format wifi_link ota_client
 )

@@ -6,8 +6,11 @@
 #include "vars.h"
 
 #include <stdio.h>
+#include "esp_app_desc.h"
 #include "esp_log.h"
 #include "sdkconfig.h"
+#include "settings.h"
+#include "ota_client.h"
 
 static const char *TAG = "ui_vars";
 
@@ -30,9 +33,20 @@ static tyre_severity_t s_slip_sev[TYRE_COUNT];  // fed back each loop -- hystere
 static tyre_warn_state_t s_tyre_warn;
 static bool s_tyre_warning_now;
 
+// OTA (docs/ota-update-spec.md 7-8). ota_client owns the check/install
+// flow; this just translates its state into the screen's display text.
+static char s_ota_version[32];
+static char s_ota_status_text[48];
+static bool s_ota_busy;
+static bool s_ota_error;
+
 void ui_vars_refresh(uint32_t now_ms)
 {
     model_snapshot(&s_snap);
+
+    if (!s_started) {
+        snprintf(s_ota_version, sizeof(s_ota_version), "%s", esp_app_get_description()->version);
+    }
 
     // Speed is held between display updates to stop flicker (SPEC 5 note 5),
     // but a change of validity shows at once. The speed font has digits only,
@@ -132,6 +146,50 @@ void ui_vars_refresh(uint32_t now_ms)
     s_tyre_warning_now = tyre_warn_update(&s_tyre_warn, warn_condition, now_ms,
                                           CONFIG_TYRE_WARN_SET_MS, CONFIG_TYRE_WARN_CLEAR_MS);
 
+    // OTA check/install status (docs/ota-update-spec.md 7-8).
+    switch (ota_client_get_state()) {
+    case OTA_CLIENT_IDLE:
+        s_ota_status_text[0] = '\0';
+        s_ota_busy = false;
+        s_ota_error = false;
+        break;
+    case OTA_CLIENT_CONNECTING_WIFI:
+        snprintf(s_ota_status_text, sizeof(s_ota_status_text), "Connecting to Wi-Fi...");
+        s_ota_busy = true;
+        s_ota_error = false;
+        break;
+    case OTA_CLIENT_CHECKING:
+        snprintf(s_ota_status_text, sizeof(s_ota_status_text), "Checking for updates...");
+        s_ota_busy = true;
+        s_ota_error = false;
+        break;
+    case OTA_CLIENT_UP_TO_DATE:
+        snprintf(s_ota_status_text, sizeof(s_ota_status_text), "Up to date");
+        s_ota_busy = false;
+        s_ota_error = false;
+        break;
+    case OTA_CLIENT_UPDATE_AVAILABLE:
+        snprintf(s_ota_status_text, sizeof(s_ota_status_text), "Update available: %s", ota_client_get_available_version());
+        s_ota_busy = false;
+        s_ota_error = false;
+        break;
+    case OTA_CLIENT_DOWNLOADING:
+        snprintf(s_ota_status_text, sizeof(s_ota_status_text), "Installing... %d%%", ota_client_get_progress_pct());
+        s_ota_busy = true;
+        s_ota_error = false;
+        break;
+    case OTA_CLIENT_REBOOTING:
+        snprintf(s_ota_status_text, sizeof(s_ota_status_text), "Installed, rebooting...");
+        s_ota_busy = true;
+        s_ota_error = false;
+        break;
+    case OTA_CLIENT_FAILED:
+        snprintf(s_ota_status_text, sizeof(s_ota_status_text), "%s", ota_client_get_fail_reason());
+        s_ota_busy = false;
+        s_ota_error = true;
+        break;
+    }
+
     s_started = true;
 }
 
@@ -169,6 +227,24 @@ const char *get_var_wd_mode_text(void) { return s_wd_mode; }
 const char *get_var_wd_torque_text(void) { return s_wd_torque; }
 bool get_var_is_tyre_warning(void) { return s_tyre_warning_now; }
 
+const char *get_var_ota_version_text(void) { return s_ota_version; }
+const char *get_var_ota_status_text(void) { return s_ota_status_text; }
+const char *get_var_ota_action_text(void)
+{
+    switch (ota_client_get_state()) {
+    case OTA_CLIENT_CONNECTING_WIFI: return "Connecting...";
+    case OTA_CLIENT_CHECKING:        return "Checking...";
+    case OTA_CLIENT_UPDATE_AVAILABLE: return "Install";
+    case OTA_CLIENT_DOWNLOADING:     return "Installing...";
+    case OTA_CLIENT_REBOOTING:       return "Rebooting...";
+    default:                         return "Check for update";
+    }
+}
+bool get_var_is_ota_beta_channel(void) { return settings_ota_beta_channel(); }
+bool get_var_is_ota_stable_channel(void) { return !settings_ota_beta_channel(); }
+bool get_var_is_ota_busy(void) { return s_ota_busy; }
+bool get_var_is_ota_error(void) { return s_ota_error; }
+
 static void ignored(const char *name)
 {
     ESP_LOGD(TAG, "set_var_%s ignored (UI is read-only)", name);
@@ -197,3 +273,11 @@ void set_var_slip_rr_text(const char *value) { (void)value; ignored("slip_rr_tex
 void set_var_wd_mode_text(const char *value) { (void)value; ignored("wd_mode_text"); }
 void set_var_wd_torque_text(const char *value) { (void)value; ignored("wd_torque_text"); }
 void set_var_is_tyre_warning(bool value) { (void)value; ignored("is_tyre_warning"); }
+
+void set_var_ota_version_text(const char *value) { (void)value; ignored("ota_version_text"); }
+void set_var_ota_status_text(const char *value) { (void)value; ignored("ota_status_text"); }
+void set_var_ota_action_text(const char *value) { (void)value; ignored("ota_action_text"); }
+void set_var_is_ota_beta_channel(bool value) { (void)value; ignored("is_ota_beta_channel"); }
+void set_var_is_ota_stable_channel(bool value) { (void)value; ignored("is_ota_stable_channel"); }
+void set_var_is_ota_busy(bool value) { (void)value; ignored("is_ota_busy"); }
+void set_var_is_ota_error(bool value) { (void)value; ignored("is_ota_error"); }

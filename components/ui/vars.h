@@ -34,7 +34,14 @@ enum FlowGlobalVariables {
     FLOW_GLOBAL_VARIABLE_SLIP_RR_TEXT = 18,
     FLOW_GLOBAL_VARIABLE_WD_MODE_TEXT = 19,
     FLOW_GLOBAL_VARIABLE_WD_TORQUE_TEXT = 20,
-    FLOW_GLOBAL_VARIABLE_IS_TYRE_WARNING = 21
+    FLOW_GLOBAL_VARIABLE_IS_TYRE_WARNING = 21,
+    FLOW_GLOBAL_VARIABLE_OTA_VERSION_TEXT = 22,
+    FLOW_GLOBAL_VARIABLE_OTA_STATUS_TEXT = 23,
+    FLOW_GLOBAL_VARIABLE_OTA_ACTION_TEXT = 24,
+    FLOW_GLOBAL_VARIABLE_IS_OTA_BETA_CHANNEL = 25,
+    FLOW_GLOBAL_VARIABLE_IS_OTA_STABLE_CHANNEL = 26,
+    FLOW_GLOBAL_VARIABLE_IS_OTA_BUSY = 27,
+    FLOW_GLOBAL_VARIABLE_IS_OTA_ERROR = 28
 };
 
 // Native global variables
@@ -83,6 +90,20 @@ extern const char *get_var_wd_torque_text();
 extern void set_var_wd_torque_text(const char *value);
 extern bool get_var_is_tyre_warning();
 extern void set_var_is_tyre_warning(bool value);
+extern const char *get_var_ota_version_text();
+extern void set_var_ota_version_text(const char *value);
+extern const char *get_var_ota_status_text();
+extern void set_var_ota_status_text(const char *value);
+extern const char *get_var_ota_action_text();
+extern void set_var_ota_action_text(const char *value);
+extern bool get_var_is_ota_beta_channel();
+extern void set_var_is_ota_beta_channel(bool value);
+extern bool get_var_is_ota_stable_channel();
+extern void set_var_is_ota_stable_channel(bool value);
+extern bool get_var_is_ota_busy();
+extern void set_var_is_ota_busy(bool value);
+extern bool get_var_is_ota_error();
+extern void set_var_is_ota_error(bool value);
 
 #ifdef __cplusplus
 }

@@ -19,9 +19,25 @@ CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
 # LVGL 9.5.0
 CONFIG_LV_FONT_MONTSERRAT_28=y
 
-# Custom partition table: 3 MB app
+# Custom partition table: two 2 MB OTA app slots (docs/ota-update-spec.md 4.1)
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# OTA signing and rollback (docs/ota-update-spec.md 4.2). Signed apps without
+# hardware secure boot: gates esp_ota_ops/esp_https_ota installs (R4), never
+# USB flashing. Images are built unsigned here (CONFIG_SECURE_BOOT_BUILD_
+# SIGNED_BINARIES=n); CI signs them as a separate step. CONFIG_SECURE_SIGNED_
+# ON_BOOT_NO_SECURE_BOOT is left off (default, per Espressif's own guidance
+# without hardware secure boot) -- only the OTA-install path is checked.
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
+CONFIG_SECURE_SIGNED_APPS_NO_SECURE_BOOT=y
+CONFIG_SECURE_SIGNED_APPS_RSA_SCHEME=y
+CONFIG_SECURE_SIGNED_ON_UPDATE_NO_SECURE_BOOT=y
+CONFIG_SECURE_BOOT_BUILD_SIGNED_BINARIES=n
+
+# Don't pin a single CA for the OTA manifest/release HTTPS endpoints --
+# GitHub's backing infra can change leaf/intermediate certs without notice.
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
 
 # TWAI receive interrupt keeps running while flash is written (NVS saves),
 # so frames are not lost from the small hardware FIFO.

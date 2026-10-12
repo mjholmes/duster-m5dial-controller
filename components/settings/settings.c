@@ -14,12 +14,15 @@ static const char *const KEY_BRIGHTNESS[2] = { "bright_day", "bright_night" };
 // Single-level key from before day/night levels; read once as the day value.
 static const char *KEY_BRIGHTNESS_OLD = "bright_pct";
 
+static const char *KEY_OTA_BETA = "ota_beta";
+
 static int s_brightness_pct[2] = {
     CONFIG_DISPLAY_BRIGHTNESS_DAY_DEFAULT_PCT,
     CONFIG_DISPLAY_BRIGHTNESS_NIGHT_DEFAULT_PCT,
 };
 static bool s_dirty;
 static uint32_t s_changed_ms;
+static bool s_ota_beta_channel;
 
 static bool brightness_valid(int pct)
 {
@@ -48,6 +51,10 @@ esp_err_t settings_init(void)
                 s_brightness_pct[0] = pct;
             }
         }
+        uint8_t beta;
+        if (nvs_get_u8(h, KEY_OTA_BETA, &beta) == ESP_OK) {
+            s_ota_beta_channel = beta != 0;
+        }
         nvs_close(h);
     }
     ESP_LOGI(TAG, "brightness day %d%%, night %d%%", s_brightness_pct[0], s_brightness_pct[1]);
@@ -67,6 +74,32 @@ void settings_set_brightness_pct(bool night, int pct)
     s_brightness_pct[night] = pct;
     s_dirty = true;
     s_changed_ms = (uint32_t)(esp_timer_get_time() / 1000);
+}
+
+bool settings_ota_beta_channel(void)
+{
+    return s_ota_beta_channel;
+}
+
+void settings_set_ota_beta_channel(bool beta)
+{
+    if (beta == s_ota_beta_channel) {
+        return;
+    }
+    s_ota_beta_channel = beta;
+
+    nvs_handle_t h;
+    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &h);
+    if (err == ESP_OK) {
+        err = nvs_set_u8(h, KEY_OTA_BETA, beta ? 1 : 0);
+        if (err == ESP_OK) {
+            err = nvs_commit(h);
+        }
+        nvs_close(h);
+    }
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "save ota channel failed: %s", esp_err_to_name(err));
+    }
 }
 
 void settings_service(uint32_t now_ms)
