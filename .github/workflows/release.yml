@@ -1,0 +1,71 @@
+name: Release
+
+# docs/ota-update-spec.md 6.1 / 13 step 5. Pages/manifest publishing (6.1
+# step 6) isn't wired up yet -- that's step 6, blocked on OQ-34 (repo
+# going public).
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check no Wi-Fi defaults are committed
+        run: |
+          if grep -qE '^CONFIG_DUSTER_WIFI_DEFAULT_(SSID|PSK)="[^"]' sdkconfig.defaults; then
+            echo "::error::sdkconfig.defaults must not set a default Wi-Fi SSID or PSK (docs/ota-update-spec.md 3.2)"
+            exit 1
+          fi
+
+      - name: Set FIRMWARE_VERSION from the tag
+        run: echo "FIRMWARE_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      - name: Build
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.5.5
+          target: esp32s3
+          path: '.'
+          # auxbeam-light-controller (the one external git dependency,
+          # main/components/aux_link/idf_component.yml) is public, so the
+          # IDF Component Manager clones it anonymously -- no credentials
+          # needed inside the build container.
+          extra_docker_args: -e FIRMWARE_VERSION=${{ env.FIRMWARE_VERSION }}
+
+      - name: Sign firmware
+        env:
+          OTA_SIGNING_KEY: ${{ secrets.OTA_SIGNING_KEY }}
+        run: |
+          python3 -m pip install --quiet esptool
+          umask 177
+          printf '%s' "$OTA_SIGNING_KEY" > signing_key.pem
+          espsecure.py sign_data --version 2 --keyfile signing_key.pem \
+            -o firmware.bin build/duster-m5dial-controller.bin
+          shred -u signing_key.pem
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          args=(release create "$TAG" firmware.bin --title "$TAG" --generate-notes)
+          if [[ "$TAG" == *-beta.* ]]; then
+            args+=(--prerelease)
+          else
+            args+=(--latest)
+          fi
+          gh "${args[@]}"

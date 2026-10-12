@@ -1,7 +1,6 @@
 dependencies:
   # Pinned release (SPEC 7.3). v0.1.1 contains L-1, L-2, L-5 and L-6;
-  # v0.1.0 does not work with a real RA60. Private repository: the build
-  # machine needs git access to github.com/mjholmes.
+  # v0.1.0 does not work with a real RA60. Public repository (2026-10-12).
   auxbeam-light-controller:
     git: https://github.com/mjholmes/auxbeam-light-controller.git
     version: v0.1.1
