@@ -9,7 +9,7 @@ Firmware for an M5Dial (ESP32-S3) in-car controller and display for a Dacia Dust
 | ESP-IDF | **v5.5.5** (enforced by `idf: "==5.5.5"` in `main/idf_component.yml`) |
 | LVGL | 9.5.0 (must match the EEZ Studio project setting) |
 | M5Unified / M5GFX | 0.2.23 / 0.2.30 (board layer only, subject to the step 1 spike) |
-| auxbeam-light-controller | **v0.1.1** git tag (private repo; the build machine needs GitHub access). Locked in `dependencies.lock` |
+| auxbeam-light-controller | **v0.1.1** git tag (public repo). Locked in `dependencies.lock` |
 
 ## Build
 
