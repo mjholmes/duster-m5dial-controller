@@ -1,0 +1,29 @@
+name: Host tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # aux_tests links the real auxbeam-light-controller sources from a
+      # sibling checkout (test/host/CMakeLists.txt), pinned to the same
+      # tag main/components/aux_link/idf_component.yml uses.
+      - name: Checkout auxbeam-light-controller (sibling)
+        run: git clone --depth 1 --branch v0.1.1 https://github.com/mjholmes/auxbeam-light-controller.git ../auxbeam-light-controller
+
+      - name: Configure
+        run: cmake -S test/host -B build-host
+
+      - name: Build
+        run: cmake --build build-host
+
+      - name: Run host_tests
+        run: ./build-host/host_tests
+
+      - name: Run aux_tests
+        run: ./build-host/aux_tests
