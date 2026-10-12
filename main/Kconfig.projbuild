@@ -189,14 +189,13 @@ menu "Duster controller"
 
         config OTA_MANIFEST_URL
             string "OTA manifest URL (empty = not configured)"
-            default ""
+            default "https://mjholmes.github.io/duster-m5dial-controller/ota/manifest.json"
             help
-                docs/ota-update-spec.md 6.2. Empty by default -- the real
-                GitHub Pages URL isn't live yet (OQ-34, repo still
-                private). Set locally to a bench-hosted test manifest
-                (e.g. http://<laptop-lan-ip>:8000/manifest.json) for
-                13 step 4; not meant to be set in the committed
-                sdkconfig.defaults until the repo goes public.
+                docs/ota-update-spec.md 6.2. Published by the release
+                workflow (.github/workflows/release.yml) to the gh-pages
+                branch. Override locally (not in the committed
+                sdkconfig.defaults) to point at a bench-hosted test
+                manifest instead, e.g. http://<laptop-lan-ip>:8000/manifest.json.
 
         config OTA_HTTP_BUFFER_SIZE
             int "esp_http_client RX buffer size for OTA (bytes)"

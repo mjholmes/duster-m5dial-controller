@@ -270,6 +270,16 @@ esp_err_t ota_client_start(void)
     if (!s_req_q) {
         return ESP_ERR_NO_MEM;
     }
+
+    // docs/ota-update-spec.md 7: "a notice that the update was rolled
+    // back." Shown as the initial status until the user next interacts
+    // with the screen (checks or installs), which naturally moves the
+    // state on.
+    if (esp_ota_get_last_invalid_partition() != NULL) {
+        snprintf(s_fail_reason, sizeof(s_fail_reason), "Previous update rolled back");
+        s_state = OTA_CLIENT_FAILED;
+    }
+
     BaseType_t ok = xTaskCreatePinnedToCore(ota_task, "ota", OTA_TASK_STACK, NULL, OTA_TASK_PRIO, NULL, OTA_TASK_CORE);
     return ok == pdPASS ? ESP_OK : ESP_ERR_NO_MEM;
 }

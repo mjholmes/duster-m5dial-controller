@@ -1,8 +1,8 @@
 name: Release
 
-# docs/ota-update-spec.md 6.1 / 13 step 5. Pages/manifest publishing (6.1
-# step 6) isn't wired up yet -- that's step 6, blocked on OQ-34 (repo
-# going public).
+# docs/ota-update-spec.md 6.1 / 13 steps 5-6. Manifest lives on the
+# gh-pages branch (GitHub Pages source) at ota/manifest.json; each run
+# updates only its own channel's entry, leaving the other alone.
 
 on:
   push:
@@ -31,8 +31,14 @@ jobs:
             exit 1
           fi
 
-      - name: Set FIRMWARE_VERSION from the tag
-        run: echo "FIRMWARE_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+      - name: Set FIRMWARE_VERSION and CHANNEL from the tag
+        run: |
+          echo "FIRMWARE_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          if [[ "${GITHUB_REF_NAME}" == *-beta.* ]]; then
+            echo "CHANNEL=beta" >> "$GITHUB_ENV"
+          else
+            echo "CHANNEL=stable" >> "$GITHUB_ENV"
+          fi
 
       - name: Build
         uses: espressif/esp-idf-ci-action@v1
@@ -63,9 +69,40 @@ jobs:
         run: |
           TAG="${GITHUB_REF_NAME}"
           args=(release create "$TAG" firmware.bin --title "$TAG" --generate-notes)
-          if [[ "$TAG" == *-beta.* ]]; then
+          if [[ "${{ env.CHANNEL }}" == beta ]]; then
             args+=(--prerelease)
           else
             args+=(--latest)
           fi
           gh "${args[@]}"
+
+      - name: Publish manifest entry (docs/ota-update-spec.md 6.2)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          SIZE=$(stat -c%s firmware.bin)
+          URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/firmware.bin"
+
+          rm -rf /tmp/pages
+          git clone --branch gh-pages --single-branch --depth 1 \
+            "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" /tmp/pages
+
+          mkdir -p /tmp/pages/ota
+          MANIFEST=/tmp/pages/ota/manifest.json
+          [ -f "$MANIFEST" ] || echo '{"schema":1}' > "$MANIFEST"
+          jq --arg ch "${{ env.CHANNEL }}" \
+             --arg ver "${{ env.FIRMWARE_VERSION }}" \
+             --arg url "$URL" \
+             --argjson size "$SIZE" \
+             '.schema = 1 | .[$ch] = {version: $ver, url: $url, size: $size}' \
+             "$MANIFEST" > "$MANIFEST.tmp"
+          mv "$MANIFEST.tmp" "$MANIFEST"
+
+          cd /tmp/pages
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ota/manifest.json
+          git commit -m "Update ${{ env.CHANNEL }} manifest entry to ${TAG}"
+          git push origin gh-pages
