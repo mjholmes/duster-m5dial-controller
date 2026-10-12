@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "stable": {
-    "version": "0.1.0",
-    "url": "https://github.com/mjholmes/duster-m5dial-controller/releases/download/v0.1.0/firmware.bin",
+    "version": "0.1.1",
+    "url": "https://github.com/mjholmes/duster-m5dial-controller/releases/download/v0.1.1/firmware.bin",
     "size": 1708032
   }
 }
