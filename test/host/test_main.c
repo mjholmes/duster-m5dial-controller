@@ -1,5 +1,6 @@
 // Host tests for pure logic (no ESP-IDF). Build: see test/host/CMakeLists.txt.
 
+#include <math.h>
 #include <stdio.h>
 #include "control_core.h"
 #include "button_fsm.h"
@@ -437,6 +438,17 @@ static void test_tyre_logic(void)
     ws.speed_centi_kmh = 400;
     ws.stale = true;
     CHECK(!wheel_slip_gate_open(&ws, 300));
+
+    // Wheel slip moving average (GitHub issue #2): one 5 ms tick moves only
+    // slightly (alpha = dt/(tau+dt)); many ticks at a constant input
+    // converge to it.
+    float avg = wheel_slip_average_update(0.0f, 10, 5, 800);
+    CHECK(fabsf(avg - 0.0621f) < 0.001f);
+    avg = 0.0f;
+    for (int i = 0; i < 2000; i++) {
+        avg = wheel_slip_average_update(avg, 20, 5, 800);
+    }
+    CHECK(fabsf(avg - 20.0f) < 0.1f);
 
     // Slip severity hysteresis: caution 5%, alert 10%, hysteresis 2%.
     CHECK(wheel_slip_severity(TYRE_SEV_OK, true, 0, 5, 10, 2) == TYRE_SEV_NODATA);

@@ -29,6 +29,17 @@ void ota_client_request_check(void);
 // ignored otherwise. Non-blocking.
 void ota_client_request_install(void);
 
+// Ask the ota task to abandon whatever it's doing and return to IDLE,
+// disconnecting Wi-Fi (GitHub issue #4). Safe from any state: a cooperative
+// flag checked inside the connect/check/download loops, since none of
+// those can be interrupted mid-call from another task. Non-blocking.
+void ota_client_request_cancel(void);
+
+// Call when the channel selection changes (GitHub issue #3): a pending
+// OTA_CLIENT_UPDATE_AVAILABLE result is for the *previous* channel, so it
+// resets to IDLE rather than letting a later Install use a stale target.
+void ota_client_notify_channel_changed(void);
+
 // Any task.
 ota_client_state_t ota_client_get_state(void);
 
