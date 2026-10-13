@@ -59,6 +59,14 @@ uint16_t wheel_speed_median(const uint16_t raw[TYRE_COUNT]);
 // (raw - reference) * 100 / reference, clamped to -99..99.
 int wheel_slip_pct(uint16_t raw, uint16_t reference);
 
+// Exponential moving average (GitHub issue #2): the raw per-tick slip% is
+// too jittery to read; smoothing with a ~800 ms time constant and holding
+// the *displayed* text (and tyre colour) to this averaged value, updated
+// at most twice a second, gives a stable, readable number. Call every
+// tick the gate is open; seed prev_avg with the first reading (no ramp-up
+// lag) when the gate has just opened. alpha = dt_ms / (tau_ms + dt_ms).
+float wheel_slip_average_update(float prev_avg, int slip_pct_now, uint32_t dt_ms, uint32_t tau_ms);
+
 // Severity on the absolute slip percentage, with hysteresis_pct applied on
 // the falling edge only (rising edges always use the plain threshold).
 tyre_severity_t wheel_slip_severity(tyre_severity_t prev, bool nodata, int slip_pct_abs,

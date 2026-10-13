@@ -36,8 +36,15 @@ void action_manualop_pressed_fog(lv_event_t *e)
 static void switch_to(lv_obj_t *target, enum ScreensEnum id)
 {
     lv_display_t *disp = lv_display_get_default();
-    if (lv_display_get_screen_active(disp) == target || lv_display_get_screen_loading(disp) == target) {
+    lv_obj_t *active = lv_display_get_screen_active(disp);
+    if (active == target || lv_display_get_screen_loading(disp) == target) {
         return;
+    }
+    // GitHub issue #4: leaving the WiFiOTA screen cancels any pending
+    // check/install and disconnects Wi-Fi, rather than letting it keep
+    // running silently in the background once it's off-screen.
+    if (active == objects.wi_fi_ota) {
+        ota_client_request_cancel();
     }
     // Stop the rest of this press (for example a swipe) acting on the new screen.
     lv_indev_t *indev = lv_indev_active();
@@ -76,8 +83,15 @@ void action_nav_gesture(lv_event_t *e)
     (void)e;
     lv_dir_t dir = lv_indev_get_gesture_dir(lv_indev_active());
 
+    // GitHub issue #6: swipe up or down jumps straight back to Speedo from
+    // any screen, independent of the left/right ring below.
+    if (dir == LV_DIR_TOP || dir == LV_DIR_BOTTOM) {
+        switch_to(objects.speedo, SCREEN_ID_SPEEDO);
+        return;
+    }
+
     // OQ-28: swipe left = next screen, swipe right = previous; the ring
-    // wraps at both ends; up/down (and no gesture) are ignored.
+    // wraps at both ends; no gesture is ignored.
     int step;
     if (dir == LV_DIR_LEFT) {
         step = 1;
@@ -109,19 +123,18 @@ void action_switchto_screen_tyres(lv_event_t *e)
     switch_to(objects.tyre_pressures, SCREEN_ID_TYRE_PRESSURES);
 }
 
-// OTA (docs/ota-update-spec.md 7). Channel choice is real and persists
-// (settings.c); check/install don't exist yet (that spec's sections 1-6),
-// so the action button just reports that.
 void action_action_ota_select_stable(lv_event_t *e)
 {
     (void)e;
     settings_set_ota_beta_channel(false);
+    ota_client_notify_channel_changed();
 }
 
 void action_action_ota_select_beta(lv_event_t *e)
 {
     (void)e;
     settings_set_ota_beta_channel(true);
+    ota_client_notify_channel_changed();
 }
 
 // docs/ota-update-spec.md 8: one button drives both steps 1-2 (connect +

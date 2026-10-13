@@ -1,5 +1,6 @@
 #include "ota_client.h"
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -38,12 +39,27 @@ static char s_available_version[32];
 static char s_pending_url[256];
 static size_t s_pending_size;
 static volatile int s_progress_pct;
+static volatile bool s_cancel_requested;
 
 static void set_failed(const char *reason)
 {
     snprintf(s_fail_reason, sizeof(s_fail_reason), "%s", reason);
     s_state = OTA_CLIENT_FAILED;
     wifi_link_request_disconnect();
+}
+
+// GitHub issue #4: a cooperative check for the two blocking calls (do_check
+// and do_install's download loop) -- ota_task owns s_state/s_cancel_requested,
+// so this always runs on ota_task, never racing the request from ui_task.
+static bool check_cancelled(void)
+{
+    if (!s_cancel_requested) {
+        return false;
+    }
+    s_cancel_requested = false;
+    s_state = OTA_CLIENT_IDLE;
+    wifi_link_request_disconnect();
+    return true;
 }
 
 // --- Manifest (docs/ota-update-spec.md 5, 6.2) ---
@@ -118,6 +134,10 @@ static void do_check(void)
         return;
     }
     esp_err_t err = fetch_manifest(body, MANIFEST_MAX_LEN);
+    if (check_cancelled()) {
+        free(body);
+        return;
+    }
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "manifest fetch failed: %s", esp_err_to_name(err));
         free(body);
@@ -190,6 +210,12 @@ static void do_install(void)
     esp_task_wdt_reconfigure(&wide_wdt);
 
     for (;;) {
+        if (s_cancel_requested) {
+            esp_https_ota_abort(handle);
+            esp_task_wdt_reconfigure(&normal_wdt);
+            check_cancelled();  // always true here; resets state and clears the flag
+            return;
+        }
         err = esp_https_ota_perform(handle);
         if (err != ESP_ERR_HTTPS_OTA_IN_PROGRESS) {
             break;
@@ -232,6 +258,16 @@ static void ota_task(void *arg)
 {
     (void)arg;
     for (;;) {
+        // CHECKING/DOWNLOADING only ever exist for the duration of the
+        // synchronous do_check()/do_install() call within one iteration
+        // (see below) -- by the time we're back at the top of the loop,
+        // state is always something else, so a plain reset here is safe.
+        if (s_cancel_requested) {
+            s_cancel_requested = false;
+            wifi_link_request_disconnect();
+            s_state = OTA_CLIENT_IDLE;
+        }
+
         ota_req_t req;
         if (xQueueReceive(s_req_q, &req, 0) == pdTRUE) {
             if (req == OTA_REQ_CHECK) {
@@ -294,6 +330,24 @@ void ota_client_request_install(void)
 {
     ota_req_t req = OTA_REQ_INSTALL;
     xQueueSend(s_req_q, &req, 0);
+}
+
+void ota_client_request_cancel(void)
+{
+    s_cancel_requested = true;
+}
+
+void ota_client_notify_channel_changed(void)
+{
+    // GitHub issue #3: an UPDATE_AVAILABLE result names a specific
+    // version/url for the *previous* channel; switching channels makes it
+    // stale, so drop back to IDLE rather than letting Install use it.
+    if (s_state == OTA_CLIENT_UPDATE_AVAILABLE) {
+        s_available_version[0] = '\0';
+        s_pending_url[0] = '\0';
+        s_pending_size = 0;
+        s_state = OTA_CLIENT_IDLE;
+    }
 }
 
 ota_client_state_t ota_client_get_state(void) { return s_state; }

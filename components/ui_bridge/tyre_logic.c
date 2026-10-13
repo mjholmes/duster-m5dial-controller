@@ -99,6 +99,12 @@ int wheel_slip_pct(uint16_t raw, uint16_t reference)
     return (int)pct;
 }
 
+float wheel_slip_average_update(float prev_avg, int slip_pct_now, uint32_t dt_ms, uint32_t tau_ms)
+{
+    float alpha = (float)dt_ms / (float)(tau_ms + dt_ms);
+    return prev_avg + alpha * ((float)slip_pct_now - prev_avg);
+}
+
 tyre_severity_t wheel_slip_severity(tyre_severity_t prev, bool nodata, int slip_pct_abs,
                                      int caution_pct, int alert_pct, int hysteresis_pct)
 {

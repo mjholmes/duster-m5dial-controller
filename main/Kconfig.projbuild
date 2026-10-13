@@ -349,6 +349,21 @@ menu "Duster controller"
             help
                 300 = 3 km/h. Below this, all four show NODATA / "--".
 
+        config SLIP_AVERAGE_TIME_CONSTANT_MS
+            int "Wheel slip display moving-average time constant (ms)"
+            default 800
+            help
+                GitHub issue #2. Smooths the raw per-tick slip% so the
+                displayed number and tyre colour are stable and readable
+                instead of jittering at the UI loop rate.
+
+        config SLIP_DISPLAY_HOLD_MS
+            int "Wheel slip display update interval (ms, max 2/s)"
+            default 500
+            help
+                GitHub issue #2. The averaged value above is computed every
+                tick; the displayed text only redraws this often.
+
         config TYRE_WARN_SET_MS
             int "Speedo tyre-warning icon: raise after condition holds (ms)"
             default 2000

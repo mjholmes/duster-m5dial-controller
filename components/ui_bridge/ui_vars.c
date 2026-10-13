@@ -5,6 +5,7 @@
 #include "ui_vars.h"
 #include "vars.h"
 
+#include <math.h>
 #include <stdio.h>
 #include "esp_app_desc.h"
 #include "esp_log.h"
@@ -32,6 +33,13 @@ static tyre_severity_t s_tyre_sev[TYRE_COUNT];
 static tyre_severity_t s_slip_sev[TYRE_COUNT];  // fed back each loop -- hysteresis state
 static tyre_warn_state_t s_tyre_warn;
 static bool s_tyre_warning_now;
+
+// Slip display/colour throttling (GitHub issue #2): the average updates
+// every tick; the text is held to <=2 Hz.
+static float s_slip_avg[TYRE_COUNT];
+static bool s_slip_avg_valid[TYRE_COUNT];
+static uint32_t s_slip_shown_ms;
+static bool s_slip_gate_shown;
 
 // OTA (docs/ota-update-spec.md 7-8). ota_client owns the check/install
 // flow; this just translates its state into the screen's display text.
@@ -102,12 +110,22 @@ void ui_vars_refresh(uint32_t now_ms)
     }
 
     // Wheel slip: gated by speed, referenced to the median of all four.
+    // Severity (and so tyre colour) and the *displayed* text are both
+    // driven by an ~800 ms moving average (GitHub issue #2) -- the raw
+    // per-tick slip% is too jittery to read. The average itself updates
+    // every tick; only the text is held to <=2 Hz so the number doesn't
+    // visibly jitter either.
     bool slip_gate = wheel_slip_gate_open(&s_snap.wheel_speeds, CONFIG_SLIP_SPEED_GATE_CENTI_KMH);
     uint16_t slip_ref = slip_gate ? wheel_speed_median(s_snap.wheel_speeds.raw) : 0;
+    bool slip_text_due = !s_started || slip_gate != s_slip_gate_shown ||
+                          (uint32_t)(now_ms - s_slip_shown_ms) >= CONFIG_SLIP_DISPLAY_HOLD_MS;
     for (int pos = 0; pos < TYRE_COUNT; pos++) {
         if (!slip_gate) {
             s_slip_sev[pos] = TYRE_SEV_NODATA;
-            snprintf(s_slip_text[pos], sizeof(s_slip_text[pos]), "--");
+            s_slip_avg_valid[pos] = false;  // reseed immediately next time the gate opens
+            if (slip_text_due) {
+                snprintf(s_slip_text[pos], sizeof(s_slip_text[pos]), "--");
+            }
             continue;
         }
         int pct = wheel_slip_pct(s_snap.wheel_speeds.raw[pos], slip_ref);
@@ -119,13 +137,32 @@ void ui_vars_refresh(uint32_t now_ms)
         } else if (pct < -99) {
             pct = -99;
         }
-        s_slip_sev[pos] = wheel_slip_severity(s_slip_sev[pos], false, pct < 0 ? -pct : pct,
-                                               CONFIG_SLIP_CAUTION_PCT, CONFIG_SLIP_ALERT_PCT, CONFIG_SLIP_HYSTERESIS_PCT);
-        if (pct > 0) {
-            snprintf(s_slip_text[pos], sizeof(s_slip_text[pos]), "+%d%%", pct);
+        if (!s_slip_avg_valid[pos]) {
+            s_slip_avg[pos] = (float)pct;  // seed with the first reading -- no ramp-up lag
+            s_slip_avg_valid[pos] = true;
         } else {
-            snprintf(s_slip_text[pos], sizeof(s_slip_text[pos]), "%d%%", pct);
+            s_slip_avg[pos] = wheel_slip_average_update(s_slip_avg[pos], pct, CONFIG_UI_LOOP_MS,
+                                                         CONFIG_SLIP_AVERAGE_TIME_CONSTANT_MS);
         }
+        int avg_pct = (int)lrintf(s_slip_avg[pos]);
+        if (avg_pct > 99) {
+            avg_pct = 99;
+        } else if (avg_pct < -99) {
+            avg_pct = -99;
+        }
+        s_slip_sev[pos] = wheel_slip_severity(s_slip_sev[pos], false, avg_pct < 0 ? -avg_pct : avg_pct,
+                                               CONFIG_SLIP_CAUTION_PCT, CONFIG_SLIP_ALERT_PCT, CONFIG_SLIP_HYSTERESIS_PCT);
+        if (slip_text_due) {
+            if (avg_pct > 0) {
+                snprintf(s_slip_text[pos], sizeof(s_slip_text[pos]), "+%d%%", avg_pct);
+            } else {
+                snprintf(s_slip_text[pos], sizeof(s_slip_text[pos]), "%d%%", avg_pct);
+            }
+        }
+    }
+    s_slip_gate_shown = slip_gate;
+    if (slip_text_due) {
+        s_slip_shown_ms = now_ms;
     }
 
     // 4WD header/footer (OQ-27: selector, not operating mode).
