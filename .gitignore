@@ -8,3 +8,10 @@ build-host/
 
 # Project notes, CAN data and reviews are kept outside this repo.
 docs/
+
+# EEZ Studio per-user editor state and manual backups -- not meaningful to
+# track; git history is now the backup mechanism for eez-studio/.
+eez-studio/*.eez-project-ui-state
+eez-studio/*.bak*
+eez-studio/*(Copy)*
+eez-studio/*(Copy *)*
