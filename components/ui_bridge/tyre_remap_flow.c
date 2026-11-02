@@ -55,6 +55,16 @@ uint8_t tyre_remap_candidate(const tyre_remap_t *r)
 
 bool tyre_remap_confirm(tyre_remap_t *r, uint8_t out_map[4])
 {
+    // Defensive: if this is ever called again after the flow already
+    // completed (e.g. a queued tap delivered just as the screen changed),
+    // r->step == 4 and writing assigned[4] would be out of bounds. Treat
+    // it as already-done rather than corrupting state.
+    if (r->step >= 4) {
+        for (int i = 0; i < 4; i++) {
+            out_map[i] = r->assigned[i];
+        }
+        return true;
+    }
     r->assigned[r->step] = tyre_remap_candidate(r);
     r->step++;
     r->candidate_idx = 0;

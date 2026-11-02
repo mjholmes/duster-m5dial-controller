@@ -140,5 +140,8 @@ void ui_styles_update(void)
 
     // Engine screen (issue #17): reuses the tyre severity style family --
     // it's a generic 4-level OK/CAUTION/ALERT/NODATA fill, not tyre-specific.
-    apply_tyre_fill(objects.coolant_temp_value, &s_coolant_fill, ui_vars_coolant_severity());
+    // Applied to coolant_box (a container), not the coolant_temp_value
+    // label itself -- EEZ Studio's check caught that st_tyre_* is only
+    // valid on container-type widgets, same as tyre_fl/tyre_fl_value.
+    apply_tyre_fill(objects.coolant_box, &s_coolant_fill, ui_vars_coolant_severity());
 }

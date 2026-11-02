@@ -5084,6 +5084,60 @@
               "useStaticText": false
             },
             {
+              "containerVersion": 1,
+              "objID": "5d7d705f-a700-492f-8217-044cab013264",
+              "type": "LVGLContainerWidget",
+              "left": 130,
+              "top": 110,
+              "width": 90,
+              "height": 30,
+              "customInputs": [],
+              "customOutputs": [],
+              "style": {
+                "objID": "284c4e65-2fce-4632-9fee-65ab3bc4f806",
+                "useStyle": "default",
+                "conditionalStyles": [],
+                "childStyles": []
+              },
+              "timeline": [],
+              "eventHandlers": [],
+              "identifier": "coolant_box",
+              "leftUnit": "px",
+              "topUnit": "px",
+              "widthUnit": "px",
+              "heightUnit": "px",
+              "children": [],
+              "widgetFlags": "GESTURE_BUBBLE|PRESS_LOCK|SNAPPABLE|SCROLL_CHAIN_HOR|SCROLL_CHAIN_VER|SCROLL_ELASTIC|SCROLL_MOMENTUM",
+              "hiddenFlagType": "literal",
+              "clickableFlag": false,
+              "clickableFlagType": "literal",
+              "flagScrollbarMode": "",
+              "flagScrollDirection": "",
+              "scrollSnapX": "",
+              "scrollSnapY": "",
+              "checkedStateType": "literal",
+              "disabledStateType": "literal",
+              "states": "",
+              "useStyle": "st_tyre_nodata",
+              "localStyles": {
+                "objID": "d627312f-8859-4673-8932-57a8e0f37058",
+                "definition": {
+                  "MAIN": {
+                    "DEFAULT": {
+                      "pad_left": 0,
+                      "pad_right": 0,
+                      "pad_top": 0,
+                      "pad_bottom": 0,
+                      "radius": 6,
+                      "border_width": 0
+                    }
+                  }
+                }
+              },
+              "group": "",
+              "groupIndex": 0
+            },
+            {
               "objID": "88a7f48d-1840-4045-a44f-78d177dd4705",
               "type": "LVGLLabelWidget",
               "left": 130,
@@ -5135,8 +5189,7 @@
               "textType": "expression",
               "longMode": "CLIP",
               "recolor": false,
-              "useStaticText": false,
-              "useStyle": "st_tyre_nodata"
+              "useStaticText": false
             },
             {
               "objID": "45eb13c3-8c6f-42e6-8a5e-1885f20c5a4b",

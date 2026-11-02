@@ -1525,7 +1525,7 @@ void create_screen_dtc_codes() {
             lv_obj_t *obj = lv_label_create(parent_obj);
             objects.dtc_codes_header = obj;
             lv_obj_set_pos(obj, 0, 14);
-            lv_obj_set_size(obj, 240, 20);
+            lv_obj_set_size(obj, 240, 18);
             lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
             lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
             lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_13, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -1638,7 +1638,7 @@ void create_screen_dtc_codes() {
             lv_label_set_text(obj, "");
         }
     }
-
+    
     tick_screen_dtc_codes();
 }
 
@@ -1731,26 +1731,13 @@ void create_screen_engine() {
             lv_obj_t *obj = lv_label_create(parent_obj);
             objects.engine_header = obj;
             lv_obj_set_pos(obj, 0, 14);
-            lv_obj_set_size(obj, 240, 20);
+            lv_obj_set_size(obj, 240, 18);
             lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
             lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
             lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_13, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_text_color(obj, lv_color_hex(0x697380), LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_label_set_text(obj, "ENGINE");
-        }
-        {
-            // fuel_level_label
-            lv_obj_t *obj = lv_label_create(parent_obj);
-            objects.fuel_level_label = obj;
-            lv_obj_set_pos(obj, 20, 90);
-            lv_obj_set_size(obj, 90, 20);
-            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
-            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
-            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_13, LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_text_color(obj, lv_color_hex(0x697380), LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_label_set_text(obj, "FUEL");
         }
         {
             // fuel_level_value
@@ -1766,17 +1753,32 @@ void create_screen_engine() {
             lv_label_set_text(obj, "");
         }
         {
-            // coolant_temp_label
+            // fuel_level_label
             lv_obj_t *obj = lv_label_create(parent_obj);
-            objects.coolant_temp_label = obj;
-            lv_obj_set_pos(obj, 130, 90);
-            lv_obj_set_size(obj, 90, 20);
+            objects.fuel_level_label = obj;
+            lv_obj_set_pos(obj, 20, 90);
+            lv_obj_set_size(obj, 90, 18);
             lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
             lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
             lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_13, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_text_color(obj, lv_color_hex(0x697380), LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_label_set_text(obj, "COOLANT");
+            lv_label_set_text(obj, "FUEL");
+        }
+        {
+            // coolant_box
+            lv_obj_t *obj = lv_obj_create(parent_obj);
+            objects.coolant_box = obj;
+            lv_obj_set_pos(obj, 130, 110);
+            lv_obj_set_size(obj, 90, 30);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            add_style_st_tyre_nodata(obj);
+            lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_pad_right(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_pad_top(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_pad_bottom(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_radius(obj, 6, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_border_width(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
         }
         {
             // coolant_temp_value
@@ -1786,18 +1788,26 @@ void create_screen_engine() {
             lv_obj_set_size(obj, 90, 30);
             lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
             lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
-            // ui_styles.c (issue #17) swaps st_tyre_* on this by severity --
-            // starts nodata, matching apply_tyre_fill()'s zero-init cache
-            // assumption (docs/ui-tyres-4wd-spec.md 6.2).
-            add_style_st_tyre_nodata(obj);
             lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_20, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_text_color(obj, lv_color_hex(0xe0e0e0), LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_radius(obj, 4, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_label_set_text(obj, "");
         }
+        {
+            // coolant_temp_label
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.coolant_temp_label = obj;
+            lv_obj_set_pos(obj, 130, 90);
+            lv_obj_set_size(obj, 90, 18);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_13, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0x697380), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "COOLANT");
+        }
     }
-
+    
     tick_screen_engine();
 }
 
@@ -1832,10 +1842,10 @@ void create_screen_settings() {
     {
         lv_obj_t *parent_obj = obj;
         {
-            // settings_header
             lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.obj5 = obj;
             lv_obj_set_pos(obj, 0, 14);
-            lv_obj_set_size(obj, 240, 20);
+            lv_obj_set_size(obj, 240, 18);
             lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
             lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
             lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_13, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -1844,8 +1854,7 @@ void create_screen_settings() {
             lv_label_set_text(obj, "SETTINGS");
         }
         {
-            // settings_brightness_row -- info only, not tappable (brightness
-            // is already set globally by the encoder on every screen).
+            // settings_brightness_row
             lv_obj_t *obj = lv_label_create(parent_obj);
             objects.settings_brightness_row = obj;
             lv_obj_set_pos(obj, 10, 70);
@@ -1858,14 +1867,14 @@ void create_screen_settings() {
             lv_label_set_text(obj, "");
         }
         {
-            // settings_firmware_row -- tap navigates to WiFiOTA (issue #1:
-            // it left the main ring, this is now how it's reached).
+            // settings_firmware_row
             lv_obj_t *obj = lv_label_create(parent_obj);
             objects.settings_firmware_row = obj;
             lv_obj_set_pos(obj, 10, 110);
             lv_obj_set_size(obj, 220, 24);
             lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
             lv_obj_add_event_cb(obj, action_switchto_screen_wifi_ota, LV_EVENT_CLICKED, (void *)0);
+            lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
             lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
             lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_13, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -1873,13 +1882,14 @@ void create_screen_settings() {
             lv_label_set_text(obj, "Firmware update >");
         }
         {
-            // settings_remap_row -- tap starts the tyre remap flow (issue #1).
+            // settings_remap_row
             lv_obj_t *obj = lv_label_create(parent_obj);
             objects.settings_remap_row = obj;
             lv_obj_set_pos(obj, 10, 150);
             lv_obj_set_size(obj, 220, 24);
             lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
             lv_obj_add_event_cb(obj, action_tyre_remap_start, LV_EVENT_CLICKED, (void *)0);
+            lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
             lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
             lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_13, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -1887,7 +1897,7 @@ void create_screen_settings() {
             lv_label_set_text(obj, "Tyre remap >");
         }
     }
-
+    
     tick_screen_settings();
 }
 
@@ -1909,13 +1919,12 @@ void create_screen_tyre_remap() {
     lv_obj_set_pos(obj, 0, 0);
     lv_obj_set_size(obj, 240, 240);
     lv_obj_add_event_cb(obj, action_nav_gesture, LV_EVENT_GESTURE, (void *)0);
-    // Issue #1: tap anywhere on this screen confirms the current step.
     lv_obj_add_event_cb(obj, action_tyre_remap_confirm, LV_EVENT_CLICKED, (void *)0);
     lv_obj_set_style_bg_color(obj, lv_color_hex(0x1a1a1a), LV_PART_MAIN | LV_STATE_DEFAULT);
     {
         lv_obj_t *parent_obj = obj;
         {
-            // remap_header -- "REMAP TYRES   N/4"
+            // remap_header
             lv_obj_t *obj = lv_label_create(parent_obj);
             objects.remap_header = obj;
             lv_obj_set_pos(obj, 0, 14);
@@ -1924,11 +1933,11 @@ void create_screen_tyre_remap() {
             lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
             lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_13, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_text_color(obj, lv_color_hex(0x697380), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0xe0e0e0), LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_label_set_text(obj, "");
         }
         {
-            // remap_corner -- physical corner name, e.g. "FRONT LEFT"
+            // remap_corner
             lv_obj_t *obj = lv_label_create(parent_obj);
             objects.remap_corner = obj;
             lv_obj_set_pos(obj, 20, 70);
@@ -1941,7 +1950,7 @@ void create_screen_tyre_remap() {
             lv_label_set_text(obj, "");
         }
         {
-            // remap_psi_value -- candidate's live reading
+            // remap_psi_value
             lv_obj_t *obj = lv_label_create(parent_obj);
             objects.remap_psi_value = obj;
             lv_obj_set_pos(obj, 60, 110);
@@ -1954,7 +1963,7 @@ void create_screen_tyre_remap() {
             lv_label_set_text(obj, "");
         }
         {
-            // remap_can_corner -- "car calls this X"
+            // remap_can_corner
             lv_obj_t *obj = lv_label_create(parent_obj);
             objects.remap_can_corner = obj;
             lv_obj_set_pos(obj, 20, 170);
@@ -1963,11 +1972,11 @@ void create_screen_tyre_remap() {
             lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
             lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_13, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_text_color(obj, lv_color_hex(0x697380), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0xe0e0e0), LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_label_set_text(obj, "");
         }
     }
-
+    
     tick_screen_tyre_remap();
 }
 

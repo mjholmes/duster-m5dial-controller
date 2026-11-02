@@ -543,6 +543,12 @@ static void test_tyre_remap_flow(void)
     CHECK(tyre_remap_confirm(&r, out));             // done: all 4 assigned
     CHECK(out[0] == 2 && out[1] == 3 && out[2] == 1 && out[3] == 0);
     CHECK(tyre_map_is_valid(out));                  // always a valid permutation by construction
+
+    // Defensive: confirming again after completion must not write out of
+    // bounds (r->step == 4) -- should just return the same result.
+    uint8_t out2[4];
+    CHECK(tyre_remap_confirm(&r, out2));
+    CHECK(out2[0] == 2 && out2[1] == 3 && out2[2] == 1 && out2[3] == 0);
 }
 
 static void test_engine_logic(void)
