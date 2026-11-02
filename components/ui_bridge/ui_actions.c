@@ -76,12 +76,16 @@ void action_switchto_screen_speedo(lv_event_t *e)
 // Screen ring (docs/ui-tyres-4wd-spec.md 10, supersedes per-screen gesture
 // actions in SPEC 9.3): every screen's GESTURE event calls this one action.
 // Adding a future screen means adding one row here.
+// GitHub issue #1/#17: WiFiOTA left the ring -- it's reached from the
+// Settings "Firmware update" row instead (action_switchto_screen_wifi_ota,
+// below). Engine and Settings joined it.
 static const struct { lv_obj_t **obj; enum ScreensEnum id; } s_nav_ring[] = {
     { &objects.speedo,          SCREEN_ID_SPEEDO },
     { &objects.manual,          SCREEN_ID_MANUAL },
     { &objects.tyre_pressures,  SCREEN_ID_TYRE_PRESSURES },
     { &objects.wheels_and_diff, SCREEN_ID_WHEELS_AND_DIFF },
-    { &objects.wi_fi_ota,       SCREEN_ID_WI_FI_OTA },
+    { &objects.engine,          SCREEN_ID_ENGINE },
+    { &objects.settings,        SCREEN_ID_SETTINGS },
 };
 #define NAV_RING_COUNT (int)(sizeof(s_nav_ring) / sizeof(s_nav_ring[0]))
 
@@ -135,6 +139,35 @@ void action_switchto_screen_dtc_codes(lv_event_t *e)
 {
     (void)e;
     switch_to(objects.dtc_codes, SCREEN_ID_DTC_CODES);
+}
+
+// GitHub issue #1: the Settings screen's "Firmware update" row.
+void action_switchto_screen_wifi_ota(lv_event_t *e)
+{
+    (void)e;
+    switch_to(objects.wi_fi_ota, SCREEN_ID_WI_FI_OTA);
+}
+
+// GitHub issue #1: the Settings screen's "Tyre remap" row -- starts the
+// four-step calibration flow (tyre_remap_flow.c) and opens its screen.
+void action_tyre_remap_start(lv_event_t *e)
+{
+    (void)e;
+    tyre_remap_start(ui_vars_remap_state());
+    switch_to(objects.tyre_remap, SCREEN_ID_TYRE_REMAP);
+}
+
+// Tap anywhere on the TyreRemap screen: confirms the current step's
+// candidate. Once all four are assigned, commits the result and returns
+// to Settings -- nothing is saved until the flow actually completes.
+void action_tyre_remap_confirm(lv_event_t *e)
+{
+    (void)e;
+    uint8_t map[4];
+    if (tyre_remap_confirm(ui_vars_remap_state(), map)) {
+        settings_set_tyre_map(map);
+        switch_to(objects.settings, SCREEN_ID_SETTINGS);
+    }
 }
 
 void action_action_ota_select_stable(lv_event_t *e)

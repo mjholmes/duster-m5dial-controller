@@ -18,7 +18,9 @@ enum ScreensEnum {
     SCREEN_ID_WI_FI_OTA = 5,
     SCREEN_ID_DTC_CODES = 6,
     SCREEN_ID_ENGINE = 7,
-    _SCREEN_ID_LAST = 7
+    SCREEN_ID_SETTINGS = 8,
+    SCREEN_ID_TYRE_REMAP = 9,
+    _SCREEN_ID_LAST = 9
 };
 
 typedef struct _objects_t {
@@ -97,6 +99,15 @@ typedef struct _objects_t {
     lv_obj_t *fuel_level_value;
     lv_obj_t *coolant_temp_label;
     lv_obj_t *coolant_temp_value;
+    lv_obj_t *settings;
+    lv_obj_t *settings_brightness_row;
+    lv_obj_t *settings_firmware_row;
+    lv_obj_t *settings_remap_row;
+    lv_obj_t *tyre_remap;
+    lv_obj_t *remap_header;
+    lv_obj_t *remap_corner;
+    lv_obj_t *remap_psi_value;
+    lv_obj_t *remap_can_corner;
 } objects_t;
 
 extern objects_t objects;
@@ -121,6 +132,12 @@ void tick_screen_dtc_codes();
 
 void create_screen_engine();
 void tick_screen_engine();
+
+void create_screen_settings();
+void tick_screen_settings();
+
+void create_screen_tyre_remap();
+void tick_screen_tyre_remap();
 
 void tick_screen_by_id(enum ScreensEnum screenId);
 void tick_screen(int screen_index);

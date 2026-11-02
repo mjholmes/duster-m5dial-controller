@@ -23,6 +23,16 @@ static char s_temp[8];
 static char s_coolant_temp[12];  // int16_t range in the format string, not just -40..215
 static tyre_severity_t s_coolant_sev;
 static char s_fuel_level[16];    // "42 L" -- litres, not percent (issue #17 asks for litres)
+
+// Settings + tyre remap flow (issue #1).
+static char s_settings_brightness[40];  // "Brightness: day 80%, night 40%"
+static tyre_remap_t s_remap;
+static char s_remap_step[16];           // "1/4"
+static char s_remap_corner[16];         // "FRONT LEFT"
+static char s_remap_psi[6];             // candidate's reading, same shape as s_tyre_text
+static char s_remap_can_corner[3];      // "FL"
+static const char *const REMAP_CORNER_NAME[4] = { "FRONT LEFT", "FRONT RIGHT", "REAR LEFT", "REAR RIGHT" };
+static const char *const REMAP_CORNER_CODE[4] = { "FL", "FR", "RL", "RR" };
 static char s_dtc_count[4];
 static const char *s_comms_text = "";
 static uint32_t s_speed_shown_ms;
@@ -151,6 +161,19 @@ void ui_vars_refresh(uint32_t now_ms)
         } else {
             snprintf(s_tyre_text[pos], sizeof(s_tyre_text[pos]), "%d", tyre_psi(s_snap.tyre_pressures.raw[pos]));
         }
+    }
+
+    // Settings + tyre remap flow (issue #1). After the loop above so
+    // s_tyre_text[] (indexed by raw CAN corner, unmapped) is current.
+    snprintf(s_settings_brightness, sizeof(s_settings_brightness), "Brightness: day %d%%, night %d%%",
+             settings_brightness_pct(false), settings_brightness_pct(true));
+    {
+        int step = s_remap.step < 4 ? s_remap.step : 3;
+        snprintf(s_remap_step, sizeof(s_remap_step), "%d/4", step + 1);
+        snprintf(s_remap_corner, sizeof(s_remap_corner), "%s", REMAP_CORNER_NAME[step]);
+        uint8_t cand = tyre_remap_candidate(&s_remap);
+        snprintf(s_remap_psi, sizeof(s_remap_psi), "%s", s_tyre_text[cand]);
+        snprintf(s_remap_can_corner, sizeof(s_remap_can_corner), "%s", REMAP_CORNER_CODE[cand]);
     }
 
     // Wheel slip: gated by speed, referenced to the median of all four.
@@ -300,6 +323,12 @@ bool get_var_opstatus_fog(void) { return s_snap.aux_actual.fog; }
 
 const char *get_var_coolant_temp_text(void) { return s_coolant_temp; }
 const char *get_var_fuel_level_text(void) { return s_fuel_level; }
+const char *get_var_settings_brightness_text(void) { return s_settings_brightness; }
+const char *get_var_remap_step_text(void) { return s_remap_step; }
+const char *get_var_remap_corner_text(void) { return s_remap_corner; }
+const char *get_var_remap_psi_text(void) { return s_remap_psi; }
+const char *get_var_remap_can_corner_text(void) { return s_remap_can_corner; }
+tyre_remap_t *ui_vars_remap_state(void) { return &s_remap; }
 
 bool get_var_is_dtc_present(void) { return s_snap.dtc.count > 0 || s_snap.dtc.mil_on; }
 const char *get_var_dtc_count(void) { return s_dtc_count; }
@@ -360,6 +389,11 @@ void set_var_opstatus_ledbar(bool value) { (void)value; ignored("opstatus_ledbar
 void set_var_opstatus_fog(bool value) { (void)value; ignored("opstatus_fog"); }
 void set_var_coolant_temp_text(const char *value) { (void)value; ignored("coolant_temp_text"); }
 void set_var_fuel_level_text(const char *value) { (void)value; ignored("fuel_level_text"); }
+void set_var_settings_brightness_text(const char *value) { (void)value; ignored("settings_brightness_text"); }
+void set_var_remap_step_text(const char *value) { (void)value; ignored("remap_step_text"); }
+void set_var_remap_corner_text(const char *value) { (void)value; ignored("remap_corner_text"); }
+void set_var_remap_psi_text(const char *value) { (void)value; ignored("remap_psi_text"); }
+void set_var_remap_can_corner_text(const char *value) { (void)value; ignored("remap_can_corner_text"); }
 
 void set_var_is_dtc_present(bool value) { (void)value; ignored("is_dtc_present"); }
 void set_var_dtc_count(const char *value) { (void)value; ignored("dtc_count"); }

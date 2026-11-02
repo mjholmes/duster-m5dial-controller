@@ -48,7 +48,10 @@ static void handle_button(button_fsm_t *btn, uint32_t now_ms)
 // Encoder sets display brightness (decided; replaces LVGL focus navigation).
 // Day and night levels are separate saved settings; the encoder adjusts the
 // one currently shown. Night follows dipped beam (brightness_night_step()).
-static void handle_brightness(const ui_model_t *m, bool *night, int *shown_pct)
+// Issue #1: takes detents rather than reading the encoder itself, so
+// ui_task() can route them to the tyre remap flow instead while that
+// screen is active.
+static void handle_brightness(const ui_model_t *m, bool *night, int *shown_pct, int32_t detents)
 {
     static const brightness_cfg_t cfg = {
         .min_pct = CONFIG_DISPLAY_BRIGHTNESS_MIN_PCT,
@@ -61,7 +64,6 @@ static void handle_brightness(const ui_model_t *m, bool *night, int *shown_pct)
         ESP_LOGI(TAG, "display %s", *night ? "night" : "day");
     }
 
-    int32_t detents = board_encoder_take();
     if (detents != 0) {
         settings_set_brightness_pct(*night, brightness_step(settings_brightness_pct(*night), detents, &cfg));
     }
@@ -97,7 +99,17 @@ static void ui_task(void *arg)
 
         ui_vars_refresh(now_ms);
         ui_styles_update();
-        handle_brightness(ui_vars_model(), &night, &shown_pct);
+
+        int32_t detents = board_encoder_take();
+        if (lv_display_get_screen_active(lv_display_get_default()) == objects.tyre_remap) {
+            // Issue #1: on the remap screen, the encoder cycles the
+            // current step's candidate instead of adjusting brightness.
+            if (detents != 0) {
+                tyre_remap_rotate(ui_vars_remap_state(), detents > 0 ? 1 : -1);
+            }
+        } else {
+            handle_brightness(ui_vars_model(), &night, &shown_pct, detents);
+        }
         settings_service(now_ms);
         ui_tick();
         lv_timer_handler();

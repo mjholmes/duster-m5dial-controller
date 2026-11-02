@@ -51,7 +51,12 @@ enum FlowGlobalVariables {
     FLOW_GLOBAL_VARIABLE_DTC_CODE_6 = 35,
     FLOW_GLOBAL_VARIABLE_DTC_CODE_7 = 36,
     FLOW_GLOBAL_VARIABLE_COOLANT_TEMP_TEXT = 37,
-    FLOW_GLOBAL_VARIABLE_FUEL_LEVEL_TEXT = 38
+    FLOW_GLOBAL_VARIABLE_FUEL_LEVEL_TEXT = 38,
+    FLOW_GLOBAL_VARIABLE_SETTINGS_BRIGHTNESS_TEXT = 39,
+    FLOW_GLOBAL_VARIABLE_REMAP_STEP_TEXT = 40,
+    FLOW_GLOBAL_VARIABLE_REMAP_CORNER_TEXT = 41,
+    FLOW_GLOBAL_VARIABLE_REMAP_PSI_TEXT = 42,
+    FLOW_GLOBAL_VARIABLE_REMAP_CAN_CORNER_TEXT = 43
 };
 
 // Native global variables
@@ -134,6 +139,16 @@ extern const char *get_var_coolant_temp_text();
 extern void set_var_coolant_temp_text(const char *value);
 extern const char *get_var_fuel_level_text();
 extern void set_var_fuel_level_text(const char *value);
+extern const char *get_var_settings_brightness_text();
+extern void set_var_settings_brightness_text(const char *value);
+extern const char *get_var_remap_step_text();
+extern void set_var_remap_step_text(const char *value);
+extern const char *get_var_remap_corner_text();
+extern void set_var_remap_corner_text(const char *value);
+extern const char *get_var_remap_psi_text();
+extern void set_var_remap_psi_text(const char *value);
+extern const char *get_var_remap_can_corner_text();
+extern void set_var_remap_can_corner_text(const char *value);
 
 #ifdef __cplusplus
 }

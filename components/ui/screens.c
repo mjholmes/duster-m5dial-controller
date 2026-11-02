@@ -1822,6 +1822,194 @@ void tick_screen_engine() {
     }
 }
 
+void create_screen_settings() {
+    lv_obj_t *obj = lv_obj_create(0);
+    objects.settings = obj;
+    lv_obj_set_pos(obj, 0, 0);
+    lv_obj_set_size(obj, 240, 240);
+    lv_obj_add_event_cb(obj, action_nav_gesture, LV_EVENT_GESTURE, (void *)0);
+    lv_obj_set_style_bg_color(obj, lv_color_hex(0x1a1a1a), LV_PART_MAIN | LV_STATE_DEFAULT);
+    {
+        lv_obj_t *parent_obj = obj;
+        {
+            // settings_header
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            lv_obj_set_pos(obj, 0, 14);
+            lv_obj_set_size(obj, 240, 20);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_13, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0x697380), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "SETTINGS");
+        }
+        {
+            // settings_brightness_row -- info only, not tappable (brightness
+            // is already set globally by the encoder on every screen).
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.settings_brightness_row = obj;
+            lv_obj_set_pos(obj, 10, 70);
+            lv_obj_set_size(obj, 220, 20);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_13, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0xe0e0e0), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "");
+        }
+        {
+            // settings_firmware_row -- tap navigates to WiFiOTA (issue #1:
+            // it left the main ring, this is now how it's reached).
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.settings_firmware_row = obj;
+            lv_obj_set_pos(obj, 10, 110);
+            lv_obj_set_size(obj, 220, 24);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_add_event_cb(obj, action_switchto_screen_wifi_ota, LV_EVENT_CLICKED, (void *)0);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_13, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0xe0e0e0), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "Firmware update >");
+        }
+        {
+            // settings_remap_row -- tap starts the tyre remap flow (issue #1).
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.settings_remap_row = obj;
+            lv_obj_set_pos(obj, 10, 150);
+            lv_obj_set_size(obj, 220, 24);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_add_event_cb(obj, action_tyre_remap_start, LV_EVENT_CLICKED, (void *)0);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_13, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0xe0e0e0), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "Tyre remap >");
+        }
+    }
+
+    tick_screen_settings();
+}
+
+void tick_screen_settings() {
+    {
+        const char *new_val = get_var_settings_brightness_text();
+        const char *cur_val = lv_label_get_text(objects.settings_brightness_row);
+        if (strcmp(new_val, cur_val) != 0) {
+            tick_value_change_obj = objects.settings_brightness_row;
+            lv_label_set_text(objects.settings_brightness_row, new_val);
+            tick_value_change_obj = NULL;
+        }
+    }
+}
+
+void create_screen_tyre_remap() {
+    lv_obj_t *obj = lv_obj_create(0);
+    objects.tyre_remap = obj;
+    lv_obj_set_pos(obj, 0, 0);
+    lv_obj_set_size(obj, 240, 240);
+    lv_obj_add_event_cb(obj, action_nav_gesture, LV_EVENT_GESTURE, (void *)0);
+    // Issue #1: tap anywhere on this screen confirms the current step.
+    lv_obj_add_event_cb(obj, action_tyre_remap_confirm, LV_EVENT_CLICKED, (void *)0);
+    lv_obj_set_style_bg_color(obj, lv_color_hex(0x1a1a1a), LV_PART_MAIN | LV_STATE_DEFAULT);
+    {
+        lv_obj_t *parent_obj = obj;
+        {
+            // remap_header -- "REMAP TYRES   N/4"
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.remap_header = obj;
+            lv_obj_set_pos(obj, 0, 14);
+            lv_obj_set_size(obj, 240, 20);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_13, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0x697380), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "");
+        }
+        {
+            // remap_corner -- physical corner name, e.g. "FRONT LEFT"
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.remap_corner = obj;
+            lv_obj_set_pos(obj, 20, 70);
+            lv_obj_set_size(obj, 200, 24);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_20, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0xe0e0e0), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "");
+        }
+        {
+            // remap_psi_value -- candidate's live reading
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.remap_psi_value = obj;
+            lv_obj_set_pos(obj, 60, 110);
+            lv_obj_set_size(obj, 120, 40);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_26, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0xe0e0e0), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "");
+        }
+        {
+            // remap_can_corner -- "car calls this X"
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.remap_can_corner = obj;
+            lv_obj_set_pos(obj, 20, 170);
+            lv_obj_set_size(obj, 200, 20);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_13, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0x697380), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "");
+        }
+    }
+
+    tick_screen_tyre_remap();
+}
+
+void tick_screen_tyre_remap() {
+    {
+        const char *new_val = get_var_remap_step_text();
+        const char *cur_val = lv_label_get_text(objects.remap_header);
+        if (strcmp(new_val, cur_val) != 0) {
+            tick_value_change_obj = objects.remap_header;
+            lv_label_set_text(objects.remap_header, new_val);
+            tick_value_change_obj = NULL;
+        }
+    }
+    {
+        const char *new_val = get_var_remap_corner_text();
+        const char *cur_val = lv_label_get_text(objects.remap_corner);
+        if (strcmp(new_val, cur_val) != 0) {
+            tick_value_change_obj = objects.remap_corner;
+            lv_label_set_text(objects.remap_corner, new_val);
+            tick_value_change_obj = NULL;
+        }
+    }
+    {
+        const char *new_val = get_var_remap_psi_text();
+        const char *cur_val = lv_label_get_text(objects.remap_psi_value);
+        if (strcmp(new_val, cur_val) != 0) {
+            tick_value_change_obj = objects.remap_psi_value;
+            lv_label_set_text(objects.remap_psi_value, new_val);
+            tick_value_change_obj = NULL;
+        }
+    }
+    {
+        const char *new_val = get_var_remap_can_corner_text();
+        const char *cur_val = lv_label_get_text(objects.remap_can_corner);
+        if (strcmp(new_val, cur_val) != 0) {
+            tick_value_change_obj = objects.remap_can_corner;
+            lv_label_set_text(objects.remap_can_corner, new_val);
+            tick_value_change_obj = NULL;
+        }
+    }
+}
+
 typedef void (*tick_screen_func_t)();
 tick_screen_func_t tick_screen_funcs[] = {
     tick_screen_speedo,
@@ -1831,9 +2019,11 @@ tick_screen_func_t tick_screen_funcs[] = {
     tick_screen_wi_fi_ota,
     tick_screen_dtc_codes,
     tick_screen_engine,
+    tick_screen_settings,
+    tick_screen_tyre_remap,
 };
 void tick_screen(int screen_index) {
-    if (screen_index >= 0 && screen_index < 7) {
+    if (screen_index >= 0 && screen_index < 9) {
         tick_screen_funcs[screen_index]();
     }
 }
@@ -1942,4 +2132,6 @@ void create_screens() {
     create_screen_wi_fi_ota();
     create_screen_dtc_codes();
     create_screen_engine();
+    create_screen_settings();
+    create_screen_tyre_remap();
 }
