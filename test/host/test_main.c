@@ -8,6 +8,7 @@
 #include "can_signals.h"
 #include "tyre_logic.h"
 #include "engine_logic.h"
+#include "tyre_remap_flow.h"
 
 static int s_checks, s_failures;
 
@@ -499,6 +500,51 @@ static void test_tyre_logic(void)
     CHECK(!tyre_map_is_valid(all_same));
 }
 
+static void test_tyre_remap_flow(void)
+{
+    tyre_remap_t r;
+    tyre_remap_start(&r);
+    CHECK(r.step == 0);
+
+    // Step 0 (FL): all 4 candidates available, default to the first (0=FL).
+    CHECK(tyre_remap_candidate(&r) == 0);
+    tyre_remap_rotate(&r, 1);
+    CHECK(tyre_remap_candidate(&r) == 1);
+    tyre_remap_rotate(&r, 1);
+    tyre_remap_rotate(&r, 1);
+    tyre_remap_rotate(&r, 1);                      // wraps back to the first
+    CHECK(tyre_remap_candidate(&r) == 0);
+
+    // Confirm FL -> CAN corner 2 (RL).
+    tyre_remap_rotate(&r, -1);
+    CHECK(tyre_remap_candidate(&r) == 3);           // wrapped the other way
+    tyre_remap_rotate(&r, -1);
+    CHECK(tyre_remap_candidate(&r) == 2);
+    uint8_t out[4];
+    CHECK(!tyre_remap_confirm(&r, out));            // 1 of 4 done
+    CHECK(r.step == 1 && r.assigned[0] == 2);
+
+    // Step 1 (FR): candidate 2 must no longer be offered -- pool is {0,1,3}.
+    CHECK(tyre_remap_candidate(&r) == 0);
+    tyre_remap_rotate(&r, -1);
+    CHECK(tyre_remap_candidate(&r) == 3);           // wraps within the 3 remaining, skipping 2
+    CHECK(!tyre_remap_confirm(&r, out));            // confirm FR -> 3 (RR)
+
+    // Step 2 (RL): pool is {0,1}.
+    CHECK(tyre_remap_candidate(&r) == 0);
+    tyre_remap_rotate(&r, 1);
+    CHECK(tyre_remap_candidate(&r) == 1);
+    CHECK(!tyre_remap_confirm(&r, out));            // confirm RL -> 1 (FR)
+
+    // Step 3 (RR): only one candidate left, no rotation possible.
+    CHECK(tyre_remap_candidate(&r) == 0);
+    tyre_remap_rotate(&r, 1);                       // no-op: n < 2
+    CHECK(tyre_remap_candidate(&r) == 0);
+    CHECK(tyre_remap_confirm(&r, out));             // done: all 4 assigned
+    CHECK(out[0] == 2 && out[1] == 3 && out[2] == 1 && out[3] == 0);
+    CHECK(tyre_map_is_valid(out));                  // always a valid permutation by construction
+}
+
 static void test_engine_logic(void)
 {
     // coolant_severity: caution_under 60, alert_under -40, caution_over 105, alert_over 115.
@@ -536,6 +582,7 @@ int main(void)
     test_tyre_decode();
     test_tyre_logic();
     test_engine_logic();
+    test_tyre_remap_flow();
     run_obd_tests();
     s_checks += g_obd_checks;
     s_failures += g_obd_failures;
