@@ -42,9 +42,16 @@ static void switch_to(lv_obj_t *target, enum ScreensEnum id)
     }
     // GitHub issue #4: leaving the WiFiOTA screen cancels any pending
     // check/install and disconnects Wi-Fi, rather than letting it keep
-    // running silently in the background once it's off-screen.
+    // running silently in the background once it's off-screen. GitHub
+    // issue #12: only while something is actually in flight -- cancelling
+    // unconditionally also reset OTA_CLIENT_FAILED back to IDLE, silently
+    // clearing the "previous update rolled back" notice before the user
+    // had a chance to see it.
     if (active == objects.wi_fi_ota) {
-        ota_client_request_cancel();
+        ota_client_state_t s = ota_client_get_state();
+        if (s == OTA_CLIENT_CONNECTING_WIFI || s == OTA_CLIENT_CHECKING || s == OTA_CLIENT_DOWNLOADING) {
+            ota_client_request_cancel();
+        }
     }
     // Stop the rest of this press (for example a swipe) acting on the new screen.
     lv_indev_t *indev = lv_indev_active();

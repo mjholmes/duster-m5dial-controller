@@ -41,23 +41,26 @@ void app_main(void)
     ESP_ERROR_CHECK(control_start());
     ESP_ERROR_CHECK(can_link_start());
 
-    // Self-test (docs/ota-update-spec.md 8 step 7): TWAI and the display
-    // are confirmed working by the two ESP_ERROR_CHECK calls above having
-    // not aborted. No separate 60 s timer is needed -- this point is
-    // reached synchronously, within a second of boot, and the existing
-    // 3 s task watchdog (SPEC 5) already forces a reset (and so a
-    // rollback, while still pending-verify) on anything that hangs before
-    // it.
-    esp_err_t mark_err = esp_ota_mark_app_valid_cancel_rollback();
-    if (mark_err != ESP_OK) {
-        ESP_LOGW(TAG, "mark app valid failed: %s", esp_err_to_name(mark_err));
-    }
-
     ESP_ERROR_CHECK(aux_link_start());
     ESP_ERROR_CHECK(obd_client_start());
     ESP_ERROR_CHECK(wifi_link_start());
     ESP_ERROR_CHECK(ota_client_start());
     ESP_ERROR_CHECK(ui_bridge_start());
+
+    // Self-test (docs/ota-update-spec.md 8 step 7): everything above is
+    // confirmed working by its ESP_ERROR_CHECK not having aborted. No
+    // separate 60 s timer is needed -- this point is reached synchronously,
+    // within a second of boot, and the existing 3 s task watchdog (SPEC 5)
+    // already forces a reset on anything that hangs before it. GitHub issue
+    // #8: this must come after every _start() call, not just board/control/
+    // can_link, or a boot-time failure in the subsystems added for OTA
+    // (aux/obd/wifi/ota/ui) would already be past the point of no return --
+    // marked valid, so the bootloader's automatic pending-verify rollback
+    // (bootloader_utility.c) can no longer save a bad image.
+    esp_err_t mark_err = esp_ota_mark_app_valid_cancel_rollback();
+    if (mark_err != ESP_OK) {
+        ESP_LOGW(TAG, "mark app valid failed: %s", esp_err_to_name(mark_err));
+    }
 
     vTaskDelay(pdMS_TO_TICKS(2000));
     log_heap("idle");

@@ -150,7 +150,13 @@ void ui_vars_refresh(uint32_t now_ms)
         } else if (avg_pct < -99) {
             avg_pct = -99;
         }
-        s_slip_sev[pos] = wheel_slip_severity(s_slip_sev[pos], false, avg_pct < 0 ? -avg_pct : avg_pct,
+        // GitHub issue #13: severity is driven by the instantaneous pct,
+        // not avg_pct -- the ~800ms moving average below is a display
+        // smoothing aid only (GitHub issue #2) and could damp a brief but
+        // real high-slip event below the ALERT threshold. The function's
+        // own hysteresis still prevents the highlight flickering on the
+        // way back down.
+        s_slip_sev[pos] = wheel_slip_severity(s_slip_sev[pos], false, pct < 0 ? -pct : pct,
                                                CONFIG_SLIP_CAUTION_PCT, CONFIG_SLIP_ALERT_PCT, CONFIG_SLIP_HYSTERESIS_PCT);
         if (slip_text_due) {
             if (avg_pct > 0) {

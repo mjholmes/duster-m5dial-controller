@@ -203,6 +203,17 @@ static void wifi_task(void *arg)
                 stop_wifi();
                 s_state = WIFI_LINK_FAILED;
             }
+        } else if (s_state == WIFI_LINK_CONNECTED) {
+            // GitHub issue #10: WIFI_FAIL_BIT, set on any
+            // WIFI_EVENT_STA_DISCONNECTED, used to only be read in the
+            // CONNECTING branch above -- a drop after reaching CONNECTED
+            // (AP out of range, router reboot) left s_state stuck at
+            // CONNECTED forever even though the radio was down.
+            if (xEventGroupGetBits(s_evt_group) & WIFI_FAIL_BIT) {
+                ESP_LOGW(TAG, "disconnected while connected");
+                stop_wifi();
+                s_state = WIFI_LINK_FAILED;
+            }
         }
 
         vTaskDelay(pdMS_TO_TICKS(WIFI_TASK_PERIOD_MS));

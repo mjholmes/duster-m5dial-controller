@@ -7,11 +7,17 @@ CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
 
 CONFIG_FREERTOS_HZ=1000
 
-# Task watchdog (SPEC 5, Watchdog): 3 s, panic and reset
+# Task watchdog (SPEC 5, Watchdog): 3 s, panic and reset. Idle-task checking
+# is off (GitHub issue #9): it was the only reason ota_client used to widen
+# this shared, process-wide timeout during an OTA download, which widened
+# it for control/can/aux too. control/can/aux/obd/ui each still subscribe
+# explicitly (health_task_start()) and keep the full 3 s window always.
 CONFIG_ESP_TASK_WDT_EN=y
 CONFIG_ESP_TASK_WDT_INIT=y
 CONFIG_ESP_TASK_WDT_TIMEOUT_S=3
 CONFIG_ESP_TASK_WDT_PANIC=y
+CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU0=n
+CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU1=n
 CONFIG_ESP_SYSTEM_PANIC_PRINT_REBOOT=y
 
 CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
