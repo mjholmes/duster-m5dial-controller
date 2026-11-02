@@ -10,7 +10,6 @@
 #include "esp_https_ota.h"
 #include "esp_ota_ops.h"
 #include "esp_log.h"
-#include "esp_task_wdt.h"
 #include "esp_timer.h"
 #include "cJSON.h"
 
@@ -200,19 +199,20 @@ static void do_install(void)
         return;
     }
 
-    // Flash erase/write briefly stalls both CPU cores (ESP32 cache-safety
-    // mechanism); a few hundred of these back to back, on top of the ui
-    // task's own CPU1 load, can starve the idle tasks past the normal 3 s
-    // task watchdog (SPEC 5 tuned that for fast vehicle-safety fault
-    // detection, not for this). Widen it only for the download itself.
-    const esp_task_wdt_config_t wide_wdt = { .timeout_ms = 20000, .idle_core_mask = 0x3, .trigger_panic = true };
-    const esp_task_wdt_config_t normal_wdt = { .timeout_ms = CONFIG_ESP_TASK_WDT_TIMEOUT_S * 1000, .idle_core_mask = 0x3, .trigger_panic = true };
-    esp_task_wdt_reconfigure(&wide_wdt);
+    // GitHub issue #9: this used to widen the shared task watchdog to 20 s
+    // here, because flash erase/write briefly stalls both CPU cores and a
+    // few hundred of those back to back could starve the idle tasks past
+    // the normal 3 s window. But esp_task_wdt_reconfigure() reconfigures
+    // the one process-wide TWDT instance -- there is no per-task timeout in
+    // the API -- so widening it here also widened it for control/can/aux,
+    // undermining SPEC 5's 3 s vehicle-safety fault detection for the
+    // whole download. Idle-task watchdog checking is now disabled instead
+    // (CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU0/1=n), which was the only
+    // documented reason for the widening, so no reconfigure is needed here.
 
     for (;;) {
         if (s_cancel_requested) {
             esp_https_ota_abort(handle);
-            esp_task_wdt_reconfigure(&normal_wdt);
             check_cancelled();  // always true here; resets state and clears the flag
             return;
         }
@@ -229,13 +229,11 @@ static void do_install(void)
     if (err != ESP_OK || !esp_https_ota_is_complete_data_received(handle)) {
         ESP_LOGW(TAG, "ota download interrupted: %s", esp_err_to_name(err));
         esp_https_ota_abort(handle);
-        esp_task_wdt_reconfigure(&normal_wdt);
         set_failed("Download interrupted");
         return;
     }
 
     esp_err_t finish_err = esp_https_ota_finish(handle);
-    esp_task_wdt_reconfigure(&normal_wdt);
     if (finish_err != ESP_OK) {
         ESP_LOGW(TAG, "ota finish failed: %s", esp_err_to_name(finish_err));
         set_failed(finish_err == ESP_ERR_OTA_VALIDATE_FAILED ? "Signature check failed" : "Install failed");
