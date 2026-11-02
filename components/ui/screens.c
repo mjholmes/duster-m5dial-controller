@@ -1717,6 +1717,111 @@ void tick_screen_dtc_codes() {
     }
 }
 
+void create_screen_engine() {
+    lv_obj_t *obj = lv_obj_create(0);
+    objects.engine = obj;
+    lv_obj_set_pos(obj, 0, 0);
+    lv_obj_set_size(obj, 240, 240);
+    lv_obj_add_event_cb(obj, action_nav_gesture, LV_EVENT_GESTURE, (void *)0);
+    lv_obj_set_style_bg_color(obj, lv_color_hex(0x1a1a1a), LV_PART_MAIN | LV_STATE_DEFAULT);
+    {
+        lv_obj_t *parent_obj = obj;
+        {
+            // engine_header
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.engine_header = obj;
+            lv_obj_set_pos(obj, 0, 14);
+            lv_obj_set_size(obj, 240, 20);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_13, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0x697380), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "ENGINE");
+        }
+        {
+            // fuel_level_label
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.fuel_level_label = obj;
+            lv_obj_set_pos(obj, 20, 90);
+            lv_obj_set_size(obj, 90, 20);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_13, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0x697380), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "FUEL");
+        }
+        {
+            // fuel_level_value
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.fuel_level_value = obj;
+            lv_obj_set_pos(obj, 20, 110);
+            lv_obj_set_size(obj, 90, 30);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_20, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0xe0e0e0), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "");
+        }
+        {
+            // coolant_temp_label
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.coolant_temp_label = obj;
+            lv_obj_set_pos(obj, 130, 90);
+            lv_obj_set_size(obj, 90, 20);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_13, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0x697380), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "COOLANT");
+        }
+        {
+            // coolant_temp_value
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.coolant_temp_value = obj;
+            lv_obj_set_pos(obj, 130, 110);
+            lv_obj_set_size(obj, 90, 30);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            // ui_styles.c (issue #17) swaps st_tyre_* on this by severity --
+            // starts nodata, matching apply_tyre_fill()'s zero-init cache
+            // assumption (docs/ui-tyres-4wd-spec.md 6.2).
+            add_style_st_tyre_nodata(obj);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_20, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0xe0e0e0), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_radius(obj, 4, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "");
+        }
+    }
+
+    tick_screen_engine();
+}
+
+void tick_screen_engine() {
+    {
+        const char *new_val = get_var_fuel_level_text();
+        const char *cur_val = lv_label_get_text(objects.fuel_level_value);
+        if (strcmp(new_val, cur_val) != 0) {
+            tick_value_change_obj = objects.fuel_level_value;
+            lv_label_set_text(objects.fuel_level_value, new_val);
+            tick_value_change_obj = NULL;
+        }
+    }
+    {
+        const char *new_val = get_var_coolant_temp_text();
+        const char *cur_val = lv_label_get_text(objects.coolant_temp_value);
+        if (strcmp(new_val, cur_val) != 0) {
+            tick_value_change_obj = objects.coolant_temp_value;
+            lv_label_set_text(objects.coolant_temp_value, new_val);
+            tick_value_change_obj = NULL;
+        }
+    }
+}
+
 typedef void (*tick_screen_func_t)();
 tick_screen_func_t tick_screen_funcs[] = {
     tick_screen_speedo,
@@ -1725,9 +1830,10 @@ tick_screen_func_t tick_screen_funcs[] = {
     tick_screen_wheels_and_diff,
     tick_screen_wi_fi_ota,
     tick_screen_dtc_codes,
+    tick_screen_engine,
 };
 void tick_screen(int screen_index) {
-    if (screen_index >= 0 && screen_index < 6) {
+    if (screen_index >= 0 && screen_index < 7) {
         tick_screen_funcs[screen_index]();
     }
 }
@@ -1835,4 +1941,5 @@ void create_screens() {
     create_screen_wheels_and_diff();
     create_screen_wi_fi_ota();
     create_screen_dtc_codes();
+    create_screen_engine();
 }

@@ -49,7 +49,9 @@ enum FlowGlobalVariables {
     FLOW_GLOBAL_VARIABLE_DTC_CODE_4 = 33,
     FLOW_GLOBAL_VARIABLE_DTC_CODE_5 = 34,
     FLOW_GLOBAL_VARIABLE_DTC_CODE_6 = 35,
-    FLOW_GLOBAL_VARIABLE_DTC_CODE_7 = 36
+    FLOW_GLOBAL_VARIABLE_DTC_CODE_7 = 36,
+    FLOW_GLOBAL_VARIABLE_COOLANT_TEMP_TEXT = 37,
+    FLOW_GLOBAL_VARIABLE_FUEL_LEVEL_TEXT = 38
 };
 
 // Native global variables
@@ -128,6 +130,10 @@ extern const char *get_var_dtc_code_6();
 extern void set_var_dtc_code_6(const char *value);
 extern const char *get_var_dtc_code_7();
 extern void set_var_dtc_code_7(const char *value);
+extern const char *get_var_coolant_temp_text();
+extern void set_var_coolant_temp_text(const char *value);
+extern const char *get_var_fuel_level_text();
+extern void set_var_fuel_level_text(const char *value);
 
 #ifdef __cplusplus
 }

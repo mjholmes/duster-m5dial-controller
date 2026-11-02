@@ -116,6 +116,7 @@ void ui_styles_update(void)
     static coupler_vis_t    s_ring_cached[2];
     static int              s_fill_cached[2];
     static bool             s_bar_cached[2];
+    static tyre_severity_t  s_coolant_fill;
 
     lv_obj_t *const tyre_objs[TYRE_COUNT]    = { objects.tyre_fl, objects.tyre_fr, objects.tyre_rl, objects.tyre_rr };
     lv_obj_t *const wd_tyre_objs[TYRE_COUNT] = { objects.wd_tyre_fl, objects.wd_tyre_fr, objects.wd_tyre_rl, objects.wd_tyre_rr };
@@ -136,4 +137,8 @@ void ui_styles_update(void)
         apply_coupler_fill(coupler_fill_objs[i], &s_fill_cached[i], coup);
         apply_coupler_bar(coupler_bar_objs[i], &s_bar_cached[i], coup);
     }
+
+    // Engine screen (issue #17): reuses the tyre severity style family --
+    // it's a generic 4-level OK/CAUTION/ALERT/NODATA fill, not tyre-specific.
+    apply_tyre_fill(objects.coolant_temp_value, &s_coolant_fill, ui_vars_coolant_severity());
 }
