@@ -264,16 +264,23 @@ static void ota_task(void *arg)
             s_cancel_requested = false;
             wifi_link_request_disconnect();
             s_state = OTA_CLIENT_IDLE;
-        }
-
-        ota_req_t req;
-        if (xQueueReceive(s_req_q, &req, 0) == pdTRUE) {
-            if (req == OTA_REQ_CHECK) {
-                s_fail_reason[0] = '\0';
-                s_state = OTA_CLIENT_CONNECTING_WIFI;
-                wifi_link_request_connect();
-            } else if (req == OTA_REQ_INSTALL && s_state == OTA_CLIENT_UPDATE_AVAILABLE) {
-                do_install();
+            // GitHub issue #11: a CHECK/INSTALL enqueued just before this
+            // cancel arrived would otherwise still be sitting in the queue
+            // and get processed below in this same tick, reigniting the
+            // exact request that was just cancelled. Discard it instead.
+            ota_req_t discard;
+            while (xQueueReceive(s_req_q, &discard, 0) == pdTRUE) {
+            }
+        } else {
+            ota_req_t req;
+            if (xQueueReceive(s_req_q, &req, 0) == pdTRUE) {
+                if (req == OTA_REQ_CHECK) {
+                    s_fail_reason[0] = '\0';
+                    s_state = OTA_CLIENT_CONNECTING_WIFI;
+                    wifi_link_request_connect();
+                } else if (req == OTA_REQ_INSTALL && s_state == OTA_CLIENT_UPDATE_AVAILABLE) {
+                    do_install();
+                }
             }
         }
 
