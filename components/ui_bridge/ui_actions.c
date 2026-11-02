@@ -130,6 +130,13 @@ void action_switchto_screen_tyres(lv_event_t *e)
     switch_to(objects.tyre_pressures, SCREEN_ID_TYRE_PRESSURES);
 }
 
+// GitHub issue #15: tapping the DTC warning icon on Speedo.
+void action_switchto_screen_dtc_codes(lv_event_t *e)
+{
+    (void)e;
+    switch_to(objects.dtc_codes, SCREEN_ID_DTC_CODES);
+}
+
 void action_action_ota_select_stable(lv_event_t *e)
 {
     (void)e;

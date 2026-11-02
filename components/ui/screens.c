@@ -304,8 +304,9 @@ void create_screen_speedo() {
             lv_obj_set_pos(obj, 94, 35);
             lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
             lv_image_set_src(obj, &img_warning);
+            lv_obj_add_event_cb(obj, action_switchto_screen_dtc_codes, LV_EVENT_CLICKED, (void *)0);
             lv_obj_add_event_cb(obj, event_handler_cb_speedo_dtc_warn_icon, LV_EVENT_ALL, 0);
-            lv_obj_remove_flag(obj, LV_OBJ_FLAG_ADV_HITTEST|LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_ADV_HITTEST|LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
             lv_obj_set_style_image_opa(obj, 255, LV_PART_MAIN | LV_STATE_CHECKED);
             lv_obj_set_style_image_opa(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
         }
@@ -448,6 +449,19 @@ void tick_screen_speedo() {
                 lv_obj_add_state(objects.obj2, LV_STATE_CHECKED);
             } else {
                 lv_obj_remove_state(objects.obj2, LV_STATE_CHECKED);
+            }
+            tick_value_change_obj = NULL;
+        }
+    }
+    {
+        bool new_val = get_var_is_dtc_present();
+        bool cur_val = lv_obj_has_flag(objects.dtc_warn_icon, LV_OBJ_FLAG_CLICKABLE);
+        if (new_val != cur_val) {
+            tick_value_change_obj = objects.dtc_warn_icon;
+            if (new_val) {
+                lv_obj_add_flag(objects.dtc_warn_icon, LV_OBJ_FLAG_CLICKABLE);
+            } else {
+                lv_obj_remove_flag(objects.dtc_warn_icon, LV_OBJ_FLAG_CLICKABLE);
             }
             tick_value_change_obj = NULL;
         }
@@ -1497,6 +1511,212 @@ void tick_screen_wi_fi_ota() {
     }
 }
 
+void create_screen_dtc_codes() {
+    lv_obj_t *obj = lv_obj_create(0);
+    objects.dtc_codes = obj;
+    lv_obj_set_pos(obj, 0, 0);
+    lv_obj_set_size(obj, 240, 240);
+    lv_obj_add_event_cb(obj, action_nav_gesture, LV_EVENT_GESTURE, (void *)0);
+    lv_obj_set_style_bg_color(obj, lv_color_hex(0x1a1a1a), LV_PART_MAIN | LV_STATE_DEFAULT);
+    {
+        lv_obj_t *parent_obj = obj;
+        {
+            // dtc_codes_header
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.dtc_codes_header = obj;
+            lv_obj_set_pos(obj, 0, 14);
+            lv_obj_set_size(obj, 240, 20);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_13, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0x697380), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "DTC CODES");
+        }
+        {
+            // dtc_code_0
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.dtc_code_0 = obj;
+            lv_obj_set_pos(obj, 40, 44);
+            lv_obj_set_size(obj, 160, 18);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_20, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0xe0e0e0), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "");
+        }
+        {
+            // dtc_code_1
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.dtc_code_1 = obj;
+            lv_obj_set_pos(obj, 40, 64);
+            lv_obj_set_size(obj, 160, 18);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_20, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0xe0e0e0), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "");
+        }
+        {
+            // dtc_code_2
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.dtc_code_2 = obj;
+            lv_obj_set_pos(obj, 40, 84);
+            lv_obj_set_size(obj, 160, 18);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_20, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0xe0e0e0), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "");
+        }
+        {
+            // dtc_code_3
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.dtc_code_3 = obj;
+            lv_obj_set_pos(obj, 40, 104);
+            lv_obj_set_size(obj, 160, 18);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_20, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0xe0e0e0), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "");
+        }
+        {
+            // dtc_code_4
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.dtc_code_4 = obj;
+            lv_obj_set_pos(obj, 40, 124);
+            lv_obj_set_size(obj, 160, 18);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_20, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0xe0e0e0), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "");
+        }
+        {
+            // dtc_code_5
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.dtc_code_5 = obj;
+            lv_obj_set_pos(obj, 40, 144);
+            lv_obj_set_size(obj, 160, 18);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_20, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0xe0e0e0), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "");
+        }
+        {
+            // dtc_code_6
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.dtc_code_6 = obj;
+            lv_obj_set_pos(obj, 40, 164);
+            lv_obj_set_size(obj, 160, 18);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_20, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0xe0e0e0), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "");
+        }
+        {
+            // dtc_code_7
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.dtc_code_7 = obj;
+            lv_obj_set_pos(obj, 40, 184);
+            lv_obj_set_size(obj, 160, 18);
+            lv_label_set_long_mode(obj, LV_LABEL_LONG_CLIP);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+            lv_obj_set_style_text_font(obj, &ui_font_saira_condensed_bold_20, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0xe0e0e0), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "");
+        }
+    }
+
+    tick_screen_dtc_codes();
+}
+
+void tick_screen_dtc_codes() {
+    {
+        const char *new_val = get_var_dtc_code_0();
+        const char *cur_val = lv_label_get_text(objects.dtc_code_0);
+        if (strcmp(new_val, cur_val) != 0) {
+            tick_value_change_obj = objects.dtc_code_0;
+            lv_label_set_text(objects.dtc_code_0, new_val);
+            tick_value_change_obj = NULL;
+        }
+    }
+    {
+        const char *new_val = get_var_dtc_code_1();
+        const char *cur_val = lv_label_get_text(objects.dtc_code_1);
+        if (strcmp(new_val, cur_val) != 0) {
+            tick_value_change_obj = objects.dtc_code_1;
+            lv_label_set_text(objects.dtc_code_1, new_val);
+            tick_value_change_obj = NULL;
+        }
+    }
+    {
+        const char *new_val = get_var_dtc_code_2();
+        const char *cur_val = lv_label_get_text(objects.dtc_code_2);
+        if (strcmp(new_val, cur_val) != 0) {
+            tick_value_change_obj = objects.dtc_code_2;
+            lv_label_set_text(objects.dtc_code_2, new_val);
+            tick_value_change_obj = NULL;
+        }
+    }
+    {
+        const char *new_val = get_var_dtc_code_3();
+        const char *cur_val = lv_label_get_text(objects.dtc_code_3);
+        if (strcmp(new_val, cur_val) != 0) {
+            tick_value_change_obj = objects.dtc_code_3;
+            lv_label_set_text(objects.dtc_code_3, new_val);
+            tick_value_change_obj = NULL;
+        }
+    }
+    {
+        const char *new_val = get_var_dtc_code_4();
+        const char *cur_val = lv_label_get_text(objects.dtc_code_4);
+        if (strcmp(new_val, cur_val) != 0) {
+            tick_value_change_obj = objects.dtc_code_4;
+            lv_label_set_text(objects.dtc_code_4, new_val);
+            tick_value_change_obj = NULL;
+        }
+    }
+    {
+        const char *new_val = get_var_dtc_code_5();
+        const char *cur_val = lv_label_get_text(objects.dtc_code_5);
+        if (strcmp(new_val, cur_val) != 0) {
+            tick_value_change_obj = objects.dtc_code_5;
+            lv_label_set_text(objects.dtc_code_5, new_val);
+            tick_value_change_obj = NULL;
+        }
+    }
+    {
+        const char *new_val = get_var_dtc_code_6();
+        const char *cur_val = lv_label_get_text(objects.dtc_code_6);
+        if (strcmp(new_val, cur_val) != 0) {
+            tick_value_change_obj = objects.dtc_code_6;
+            lv_label_set_text(objects.dtc_code_6, new_val);
+            tick_value_change_obj = NULL;
+        }
+    }
+    {
+        const char *new_val = get_var_dtc_code_7();
+        const char *cur_val = lv_label_get_text(objects.dtc_code_7);
+        if (strcmp(new_val, cur_val) != 0) {
+            tick_value_change_obj = objects.dtc_code_7;
+            lv_label_set_text(objects.dtc_code_7, new_val);
+            tick_value_change_obj = NULL;
+        }
+    }
+}
+
 typedef void (*tick_screen_func_t)();
 tick_screen_func_t tick_screen_funcs[] = {
     tick_screen_speedo,
@@ -1504,9 +1724,10 @@ tick_screen_func_t tick_screen_funcs[] = {
     tick_screen_tyre_pressures,
     tick_screen_wheels_and_diff,
     tick_screen_wi_fi_ota,
+    tick_screen_dtc_codes,
 };
 void tick_screen(int screen_index) {
-    if (screen_index >= 0 && screen_index < 5) {
+    if (screen_index >= 0 && screen_index < 6) {
         tick_screen_funcs[screen_index]();
     }
 }
@@ -1613,4 +1834,5 @@ void create_screens() {
     create_screen_tyre_pressures();
     create_screen_wheels_and_diff();
     create_screen_wi_fi_ota();
+    create_screen_dtc_codes();
 }

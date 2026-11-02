@@ -255,6 +255,16 @@ bool get_var_opstatus_fog(void) { return s_snap.aux_actual.fog; }
 
 bool get_var_is_dtc_present(void) { return s_snap.dtc.count > 0 || s_snap.dtc.mil_on; }
 const char *get_var_dtc_count(void) { return s_dtc_count; }
+// Issue #15: the actual codes, not just a count. codes_read may be less
+// than count if Mode 03 truncated; unused slots (>= codes_read) are blank.
+const char *get_var_dtc_code_0(void) { return s_snap.dtc.codes_read > 0 ? s_snap.dtc.codes[0] : ""; }
+const char *get_var_dtc_code_1(void) { return s_snap.dtc.codes_read > 1 ? s_snap.dtc.codes[1] : ""; }
+const char *get_var_dtc_code_2(void) { return s_snap.dtc.codes_read > 2 ? s_snap.dtc.codes[2] : ""; }
+const char *get_var_dtc_code_3(void) { return s_snap.dtc.codes_read > 3 ? s_snap.dtc.codes[3] : ""; }
+const char *get_var_dtc_code_4(void) { return s_snap.dtc.codes_read > 4 ? s_snap.dtc.codes[4] : ""; }
+const char *get_var_dtc_code_5(void) { return s_snap.dtc.codes_read > 5 ? s_snap.dtc.codes[5] : ""; }
+const char *get_var_dtc_code_6(void) { return s_snap.dtc.codes_read > 6 ? s_snap.dtc.codes[6] : ""; }
+const char *get_var_dtc_code_7(void) { return s_snap.dtc.codes_read > 7 ? s_snap.dtc.codes[7] : ""; }
 bool get_var_is_comms_lost(void) { return s_comms_text[0] != '\0'; }
 const char *get_var_comms_text(void) { return s_comms_text; }
 
@@ -302,6 +312,14 @@ void set_var_opstatus_ledbar(bool value) { (void)value; ignored("opstatus_ledbar
 void set_var_opstatus_fog(bool value) { (void)value; ignored("opstatus_fog"); }
 void set_var_is_dtc_present(bool value) { (void)value; ignored("is_dtc_present"); }
 void set_var_dtc_count(const char *value) { (void)value; ignored("dtc_count"); }
+void set_var_dtc_code_0(const char *value) { (void)value; ignored("dtc_code_0"); }
+void set_var_dtc_code_1(const char *value) { (void)value; ignored("dtc_code_1"); }
+void set_var_dtc_code_2(const char *value) { (void)value; ignored("dtc_code_2"); }
+void set_var_dtc_code_3(const char *value) { (void)value; ignored("dtc_code_3"); }
+void set_var_dtc_code_4(const char *value) { (void)value; ignored("dtc_code_4"); }
+void set_var_dtc_code_5(const char *value) { (void)value; ignored("dtc_code_5"); }
+void set_var_dtc_code_6(const char *value) { (void)value; ignored("dtc_code_6"); }
+void set_var_dtc_code_7(const char *value) { (void)value; ignored("dtc_code_7"); }
 void set_var_is_comms_lost(bool value) { (void)value; ignored("is_comms_lost"); }
 void set_var_comms_text(const char *value) { (void)value; ignored("comms_text"); }
 

@@ -16,7 +16,8 @@ enum ScreensEnum {
     SCREEN_ID_TYRE_PRESSURES = 3,
     SCREEN_ID_WHEELS_AND_DIFF = 4,
     SCREEN_ID_WI_FI_OTA = 5,
-    _SCREEN_ID_LAST = 5
+    SCREEN_ID_DTC_CODES = 6,
+    _SCREEN_ID_LAST = 6
 };
 
 typedef struct _objects_t {
@@ -79,6 +80,16 @@ typedef struct _objects_t {
     lv_obj_t *ota_status_text;
     lv_obj_t *ota_action_button;
     lv_obj_t *obj4;
+    lv_obj_t *dtc_codes;
+    lv_obj_t *dtc_codes_header;
+    lv_obj_t *dtc_code_0;
+    lv_obj_t *dtc_code_1;
+    lv_obj_t *dtc_code_2;
+    lv_obj_t *dtc_code_3;
+    lv_obj_t *dtc_code_4;
+    lv_obj_t *dtc_code_5;
+    lv_obj_t *dtc_code_6;
+    lv_obj_t *dtc_code_7;
 } objects_t;
 
 extern objects_t objects;
@@ -97,6 +108,9 @@ void tick_screen_wheels_and_diff();
 
 void create_screen_wi_fi_ota();
 void tick_screen_wi_fi_ota();
+
+void create_screen_dtc_codes();
+void tick_screen_dtc_codes();
 
 void tick_screen_by_id(enum ScreensEnum screenId);
 void tick_screen(int screen_index);

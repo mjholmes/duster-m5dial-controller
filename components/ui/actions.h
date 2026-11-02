@@ -16,6 +16,7 @@ extern void action_switchto_screen_tyres(lv_event_t * e);
 extern void action_action_ota_select_stable(lv_event_t * e);
 extern void action_action_ota_select_beta(lv_event_t * e);
 extern void action_action_ota_button_pressed(lv_event_t * e);
+extern void action_switchto_screen_dtc_codes(lv_event_t * e);
 
 #ifdef __cplusplus
 }
