@@ -7,6 +7,7 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 #include "esp_app_desc.h"
 #include "esp_log.h"
 #include "sdkconfig.h"
@@ -34,6 +35,13 @@ static char s_slip_text[TYRE_COUNT][6];   // "+14%" / "-3%" / "0%" / "--"
 static char s_wd_mode[6];                 // "AUTO" / "LOCK" / "2WD" / "--"
 static char s_wd_torque[10];              // "120 Nm" / "-- Nm"
 static tyre_severity_t s_tyre_sev[TYRE_COUNT];
+// Issue #1: for physical position i, which CAN-reported position's
+// reading/severity to show there. Only applied to TPMS display -- wheel
+// speed sensors are hub-mounted, not wheel-mounted, so they're never
+// remapped (docs posted to issue #1). Refreshed each tick in case the
+// remap flow just committed a change; falls back to identity if whatever
+// settings holds isn't a valid permutation.
+static uint8_t s_tyre_map[TYRE_COUNT] = { 0, 1, 2, 3 };
 static tyre_severity_t s_slip_sev[TYRE_COUNT];  // fed back each loop -- hysteresis state
 static tyre_warn_state_t s_tyre_warn;
 static bool s_tyre_warning_now;
@@ -55,6 +63,18 @@ static bool s_ota_error;
 void ui_vars_refresh(uint32_t now_ms)
 {
     model_snapshot(&s_snap);
+
+    {
+        uint8_t raw_map[TYRE_COUNT];
+        settings_tyre_map(raw_map);
+        if (tyre_map_is_valid(raw_map)) {
+            memcpy(s_tyre_map, raw_map, sizeof(s_tyre_map));
+        } else {
+            for (int i = 0; i < TYRE_COUNT; i++) {
+                s_tyre_map[i] = (uint8_t)i;
+            }
+        }
+    }
 
     if (!s_started) {
         snprintf(s_ota_version, sizeof(s_ota_version), "%s", esp_app_get_description()->version);
@@ -265,7 +285,7 @@ const ui_model_t *ui_vars_model(void)
     return &s_snap;
 }
 
-tyre_severity_t ui_vars_tyre_pressure_severity(tyre_pos_t pos) { return s_tyre_sev[pos]; }
+tyre_severity_t ui_vars_tyre_pressure_severity(tyre_pos_t pos) { return s_tyre_sev[s_tyre_map[pos]]; }
 tyre_severity_t ui_vars_wheel_slip_severity(tyre_pos_t pos) { return s_slip_sev[pos]; }
 tyre_severity_t ui_vars_coolant_severity(void) { return s_coolant_sev; }
 
@@ -296,10 +316,10 @@ const char *get_var_dtc_code_7(void) { return s_snap.dtc.codes_read > 7 ? s_snap
 bool get_var_is_comms_lost(void) { return s_comms_text[0] != '\0'; }
 const char *get_var_comms_text(void) { return s_comms_text; }
 
-const char *get_var_tyre_fl_text(void) { return s_tyre_text[TYRE_FL]; }
-const char *get_var_tyre_fr_text(void) { return s_tyre_text[TYRE_FR]; }
-const char *get_var_tyre_rl_text(void) { return s_tyre_text[TYRE_RL]; }
-const char *get_var_tyre_rr_text(void) { return s_tyre_text[TYRE_RR]; }
+const char *get_var_tyre_fl_text(void) { return s_tyre_text[s_tyre_map[TYRE_FL]]; }
+const char *get_var_tyre_fr_text(void) { return s_tyre_text[s_tyre_map[TYRE_FR]]; }
+const char *get_var_tyre_rl_text(void) { return s_tyre_text[s_tyre_map[TYRE_RL]]; }
+const char *get_var_tyre_rr_text(void) { return s_tyre_text[s_tyre_map[TYRE_RR]]; }
 const char *get_var_slip_fl_text(void) { return s_slip_text[TYRE_FL]; }
 const char *get_var_slip_fr_text(void) { return s_slip_text[TYRE_FR]; }
 const char *get_var_slip_rl_text(void) { return s_slip_text[TYRE_RL]; }

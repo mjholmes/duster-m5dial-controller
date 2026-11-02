@@ -485,6 +485,18 @@ static void test_tyre_logic(void)
     CHECK(!tyre_warn_update(&flicker, true, 1000, 2000, 10000));  // held 1000ms, not yet 2000
     CHECK(!tyre_warn_update(&flicker, false, 1500, 2000, 10000)); // flips back: timer resets
     CHECK(!tyre_warn_update(&flicker, false, 3400, 2000, 10000)); // never raised, so nothing to clear
+
+    // tyre_map_is_valid (issue #1): must be a permutation of 0..3.
+    const uint8_t identity[4] = { 0, 1, 2, 3 };
+    CHECK(tyre_map_is_valid(identity));
+    const uint8_t swapped[4] = { 1, 0, 3, 2 };
+    CHECK(tyre_map_is_valid(swapped));
+    const uint8_t dup[4] = { 0, 0, 2, 3 };          // 0 used twice, 1 missing
+    CHECK(!tyre_map_is_valid(dup));
+    const uint8_t out_of_range[4] = { 0, 1, 2, 4 }; // 4 is out of range
+    CHECK(!tyre_map_is_valid(out_of_range));
+    const uint8_t all_same[4] = { 2, 2, 2, 2 };
+    CHECK(!tyre_map_is_valid(all_same));
 }
 
 static void test_engine_logic(void)
