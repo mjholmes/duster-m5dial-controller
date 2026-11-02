@@ -12,6 +12,15 @@ bool obd_decode_pid01(const uint8_t *p, uint16_t len, bool *mil_on, uint8_t *cou
     return true;
 }
 
+bool obd_decode_pid2f(const uint8_t *p, uint16_t len, uint8_t *fuel_pct)
+{
+    if (len < 3 || p[0] != 0x41 || p[1] != 0x2F) {
+        return false;
+    }
+    *fuel_pct = (uint8_t)(((uint16_t)p[2] * 100u + 127u) / 255u);
+    return true;
+}
+
 void obd_dtc_to_string(uint8_t b0, uint8_t b1, char out[6])
 {
     out[0] = "PCBU"[(b0 >> 6) & 0x03];

@@ -22,3 +22,5 @@ tyre_severity_t ui_vars_coolant_severity(void);
 // wired to vars.h/screens -- see the commit that adds the Engine screen).
 const char *get_var_coolant_temp_text(void);
 void set_var_coolant_temp_text(const char *value);
+const char *get_var_fuel_level_text(void);
+void set_var_fuel_level_text(const char *value);

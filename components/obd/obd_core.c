@@ -67,6 +67,17 @@ static void send_mode03(obd_core_t *c, uint32_t now)
     c->state = OBD_MODE03_WAIT;
 }
 
+// Issue #17: fuel level, piggybacked onto the same round as the DTC read --
+// same repoll_ms/engine-start cadence, no separate poll timer.
+static void send_pid2f(obd_core_t *c, uint32_t now)
+{
+    const uint8_t req[] = { 0x02, 0x01, 0x2F };
+    isotp_rx_reset(&c->isotp);
+    push(c, c->req_id, req, sizeof(req));
+    c->sent_ms = now;
+    c->state = OBD_PID2F_WAIT;
+}
+
 static void go_idle(obd_core_t *c, uint32_t now)
 {
     c->state = OBD_IDLE;
@@ -113,7 +124,7 @@ static void pid01_answered(obd_core_t *c, uint32_t now, bool mil_on, uint8_t cou
     if (count > 0 && !c->codes_valid) {
         send_mode03(c, now);
     } else {
-        go_idle(c, now);
+        send_pid2f(c, now);
     }
 }
 
@@ -129,7 +140,7 @@ static void mode03_done(obd_core_t *c, uint32_t now)
         c->codes_valid = true;
         set_dtc(c, &d);
     }
-    go_idle(c, now);
+    send_pid2f(c, now);
 }
 
 void obd_core_init(obd_core_t *c, const obd_cfg_t *cfg, uint32_t now_ms)
@@ -203,6 +214,27 @@ void obd_core_step(obd_core_t *c, uint32_t now, uint8_t ign, const obd_frame_t *
         }
         if (c->isotp.active ? isotp_rx_check_timeout(&c->isotp, now, c->cfg.cf_timeout_ms)
                             : elapsed(now, c->sent_ms, c->cfg.p2_ms)) {
+            go_idle(c, now);
+        }
+        break;
+
+    case OBD_PID2F_WAIT:
+        if (rx && rx->id == OBD_ID_ENGINE_RESP) {
+            if (isotp_rx_feed(&c->isotp, rx->data, 8, now) == ISOTP_RX_DONE) {
+                uint8_t pct;
+                if (obd_decode_pid2f(c->isotp.buf, c->isotp.len, &pct)) {
+                    if (!c->fuel_valid || c->fuel_level_pct != pct) {
+                        c->fuel_changed = true;
+                    }
+                    c->fuel_level_pct = pct;
+                    c->fuel_valid = true;
+                }
+                go_idle(c, now);
+                break;
+            }
+        }
+        if (elapsed(now, c->sent_ms, c->cfg.p2_ms)) {
+            // No retry logic for fuel specifically: try again next round.
             go_idle(c, now);
         }
         break;

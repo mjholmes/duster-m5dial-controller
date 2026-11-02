@@ -21,6 +21,7 @@ static char s_speed[4];
 static char s_temp[8];
 static char s_coolant_temp[12];  // int16_t range in the format string, not just -40..215
 static tyre_severity_t s_coolant_sev;
+static char s_fuel_level[16];    // "42 L" -- litres, not percent (issue #17 asks for litres)
 static char s_dtc_count[4];
 static const char *s_comms_text = "";
 static uint32_t s_speed_shown_ms;
@@ -88,6 +89,15 @@ void ui_vars_refresh(uint32_t now_ms)
         snprintf(s_coolant_temp, sizeof(s_coolant_temp), "--");
     } else {
         snprintf(s_coolant_temp, sizeof(s_coolant_temp), "%d\xC2\xB0" "C", s_snap.coolant_temp_c);
+    }
+
+    // Fuel (issue #17): OBD gives percent only; litres is an estimate
+    // (percent * tank capacity / 100), not a direct measurement.
+    if (s_snap.fuel_stale) {
+        snprintf(s_fuel_level, sizeof(s_fuel_level), "--");
+    } else {
+        int litres = (s_snap.fuel_level_pct * CONFIG_FUEL_TANK_CAPACITY_L + 50) / 100;
+        snprintf(s_fuel_level, sizeof(s_fuel_level), "%d L", litres);
     }
 
     // DTC (SPEC 8.4). Until the OBD client exists (step 6) the status stays
@@ -269,6 +279,7 @@ bool get_var_opstatus_ledbar(void) { return s_snap.aux_actual.ledbar; }
 bool get_var_opstatus_fog(void) { return s_snap.aux_actual.fog; }
 
 const char *get_var_coolant_temp_text(void) { return s_coolant_temp; }
+const char *get_var_fuel_level_text(void) { return s_fuel_level; }
 
 bool get_var_is_dtc_present(void) { return s_snap.dtc.count > 0 || s_snap.dtc.mil_on; }
 const char *get_var_dtc_count(void) { return s_dtc_count; }
@@ -328,6 +339,7 @@ void set_var_is_auto_mode(bool value) { (void)value; ignored("is_auto_mode"); }
 void set_var_opstatus_ledbar(bool value) { (void)value; ignored("opstatus_ledbar"); }
 void set_var_opstatus_fog(bool value) { (void)value; ignored("opstatus_fog"); }
 void set_var_coolant_temp_text(const char *value) { (void)value; ignored("coolant_temp_text"); }
+void set_var_fuel_level_text(const char *value) { (void)value; ignored("fuel_level_text"); }
 
 void set_var_is_dtc_present(bool value) { (void)value; ignored("is_dtc_present"); }
 void set_var_dtc_count(const char *value) { (void)value; ignored("dtc_count"); }

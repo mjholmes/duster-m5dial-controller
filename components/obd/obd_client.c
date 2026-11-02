@@ -98,6 +98,11 @@ static void obd_task(void *arg)
             log_dtc(&core.dtc);
             control_obd_dtc(&core.dtc);
         }
+        if (core.fuel_changed) {
+            core.fuel_changed = false;
+            ESP_LOGI(TAG, "fuel level: %u%%", core.fuel_level_pct);
+            control_obd_fuel_level(core.fuel_level_pct, now_ms());
+        }
     }
 }
 

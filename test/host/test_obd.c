@@ -100,6 +100,21 @@ static void test_decode_pid01(void)
     CHECK(!obd_decode_pid01(neg, sizeof(neg), &mil, &n));
 }
 
+static void test_decode_pid2f(void)
+{
+    uint8_t pct;
+    const uint8_t full[] = { 0x41, 0x2F, 0xFF };
+    CHECK(obd_decode_pid2f(full, sizeof(full), &pct) && pct == 100);
+    const uint8_t empty[] = { 0x41, 0x2F, 0x00 };
+    CHECK(obd_decode_pid2f(empty, sizeof(empty), &pct) && pct == 0);
+    const uint8_t half[] = { 0x41, 0x2F, 0x80 };  // 128 * 100 / 255 = 50.2 -> 50
+    CHECK(obd_decode_pid2f(half, sizeof(half), &pct) && pct == 50);
+    const uint8_t neg[] = { 0x7F, 0x01, 0x12 };
+    CHECK(!obd_decode_pid2f(neg, sizeof(neg), &pct));
+    const uint8_t pid01[] = { 0x41, 0x01, 0x80 };  // wrong PID
+    CHECK(!obd_decode_pid2f(pid01, sizeof(pid01), &pct));
+}
+
 static void test_dtc_string(void)
 {
     char s[6];
@@ -194,6 +209,10 @@ static bool sent_is(int i, uint32_t id, const uint8_t *bytes, int n)
 
 static const uint8_t PID01_REQ[] = { 0x02, 0x01, 0x01 };
 static const uint8_t MODE03_REQ[] = { 0x01, 0x03 };
+static const uint8_t PID2F_REQ[] = { 0x02, 0x01, 0x2F };
+// Issue #17: every round now ends with a PID 0x2F (fuel level) request/
+// response pair before going OBD_IDLE -- this is a standard 50% reply.
+static const uint8_t FUEL_RESP[8] = { 0x03, 0x41, 0x2F, 0x80, 0, 0, 0, 0 };
 
 static void test_waits_for_ignition_then_polls(void)
 {
@@ -221,8 +240,11 @@ static void test_no_dtcs(void)
     const uint8_t r[8] = { 0x06, 0x41, 0x01, 0x00, 0x07, 0xE5, 0x00, 0x00 };
     ecu(r, 0xC7);
     CHECK(s_c.dtc.status == DTC_NONE && s_c.dtc.count == 0 && !s_c.dtc.mil_on);
-    CHECK(s_nsent == 1);                          // no Mode 03
-    CHECK(s_c.state == OBD_IDLE && s_c.dtc_changed);
+    CHECK(s_nsent == 2);                          // no Mode 03, but fuel requested immediately
+    CHECK(s_c.state == OBD_PID2F_WAIT && s_c.dtc_changed);
+    CHECK(sent_is(1, OBD_ID_FUNCTIONAL, PID2F_REQ, 3));
+    ecu(FUEL_RESP, 0xC7);                          // issue #17: fuel piggybacks on the same round
+    CHECK(s_nsent == 2 && s_c.state == OBD_IDLE && s_c.fuel_valid && s_c.fuel_level_pct == 50);
 }
 
 static void test_dtcs_single_frame_mode03(void)
@@ -237,6 +259,8 @@ static void test_dtcs_single_frame_mode03(void)
     ecu(m, 0xC7);
     CHECK(s_c.dtc.codes_read == 2);
     CHECK(strcmp(s_c.dtc.codes[0], "P0301") == 0 && strcmp(s_c.dtc.codes[1], "P0420") == 0);
+    CHECK(s_c.state == OBD_PID2F_WAIT);
+    ecu(FUEL_RESP, 0xC7);
     CHECK(s_c.state == OBD_IDLE);
 }
 
@@ -292,17 +316,21 @@ static void test_mode03_only_when_count_changes(void)
     ecu(r, 0xC7);
     const uint8_t m[8] = { 0x04, 0x43, 0x01, 0x03, 0x01, 0, 0, 0 };
     ecu(m, 0xC7);
-    CHECK(s_nsent == 2 && s_c.dtc.codes_read == 1);
+    CHECK(s_nsent == 3 && s_c.dtc.codes_read == 1);  // +1 vs before: mode03_done also requests fuel
+    ecu(FUEL_RESP, 0xC7);
+    CHECK(s_c.state == OBD_IDLE);
 
     tick(30000, 0xC7);                            // periodic poll
-    CHECK(s_nsent == 3);
-    ecu(r, 0xC7);                                 // same count
-    CHECK(s_nsent == 3 && s_c.state == OBD_IDLE); // no Mode 03
+    CHECK(s_nsent == 4);
+    ecu(r, 0xC7);                                 // same count -> no Mode 03, but fuel still requested
+    CHECK(s_nsent == 5 && s_c.state == OBD_PID2F_WAIT);
+    ecu(FUEL_RESP, 0xC7);
+    CHECK(s_c.state == OBD_IDLE);
 
     tick(30000, 0xC7);
     const uint8_t r2[8] = { 0x06, 0x41, 0x01, 0x02, 0, 0, 0, 0 };
     ecu(r2, 0xC7);                                // count changed
-    CHECK(s_nsent == 5 && sent_is(4, OBD_ID_FUNCTIONAL, MODE03_REQ, 2));
+    CHECK(s_nsent == 7 && sent_is(6, OBD_ID_FUNCTIONAL, MODE03_REQ, 2));
 }
 
 static void test_failed_mode03_rereads_next_poll(void)
@@ -340,13 +368,15 @@ static void test_engine_start_rereads_between_polls(void)
     tick(10, 0xC7);
     const uint8_t r[8] = { 0x06, 0x41, 0x01, 0x00, 0, 0, 0, 0 };
     ecu(r, 0xC7);
-    CHECK(s_c.state == OBD_IDLE && s_nsent == 1);
+    CHECK(s_c.state == OBD_PID2F_WAIT && s_nsent == 2);
+    ecu(FUEL_RESP, 0xC7);
+    CHECK(s_c.state == OBD_IDLE);
     tick(20000, 0xC3);                            // engine stopped, before the next poll (30 s in k_cfg)
-    CHECK(s_nsent == 1);
+    CHECK(s_nsent == 2);
     tick(10, 0xC6);                               // restart: cranking
     CHECK(s_c.state == OBD_WAIT_RUNNING);
     tick(800, 0xC7);                              // running: fresh read at once
-    CHECK(s_nsent == 2 && sent_is(1, OBD_ID_FUNCTIONAL, PID01_REQ, 3));
+    CHECK(s_nsent == 3 && sent_is(2, OBD_ID_FUNCTIONAL, PID01_REQ, 3));
 }
 
 static void test_other_ids_ignored(void)
@@ -368,6 +398,7 @@ void run_obd_tests(void)
     test_isotp_cf_timeout();
     test_isotp_flow_control_frame();
     test_decode_pid01();
+    test_decode_pid2f();
     test_dtc_string();
     test_decode_mode03_both_layouts();
     test_waits_for_ignition_then_polls();

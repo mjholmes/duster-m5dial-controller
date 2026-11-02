@@ -9,6 +9,10 @@
 // A bit 7 = MIL, bits 0-6 = stored DTC count.
 bool obd_decode_pid01(const uint8_t *p, uint16_t len, bool *mil_on, uint8_t *count);
 
+// Mode 01 PID 2F positive response payload: 41 2F A. Standard OBD-II
+// formula: A * 100 / 255 = fuel level %. Issue #17.
+bool obd_decode_pid2f(const uint8_t *p, uint16_t len, uint8_t *fuel_pct);
+
 // Mode 03 positive response payload: 43 [n] (b0 b1)*. Tolerates the count
 // byte being present or not by the payload length (with it the length is
 // even, without it odd). Writes up to max_codes "P0301" strings, skipping
