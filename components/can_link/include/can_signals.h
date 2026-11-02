@@ -16,6 +16,7 @@ typedef enum {
     CAN_SIG_WHEEL_SPEED_FRONT, // 0x29A WHEEL_SPEED_FRONT
     CAN_SIG_WHEEL_SPEED_REAR,  // 0x29C WHEEL_SPEED_REAR
     CAN_SIG_ETC,               // 0x1AA ETC_STATUS
+    CAN_SIG_COOLANT_TEMP,      // 0x5DA COOLANT_TEMP
     CAN_SIG_COUNT
 } can_sig_t;
 
@@ -34,6 +35,7 @@ typedef struct {
             uint8_t  mph;             // rounded, clamped 0..99
         } speed;
         int8_t ext_temp_c;
+        int16_t coolant_temp_c;  // -40..215 (exceeds int8_t range), docs/can-signals.md
         vehicle_lights_t lights;
         uint8_t ignition_raw;         // 0xC3..0xC7
         struct {

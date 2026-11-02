@@ -376,4 +376,39 @@ menu "Duster controller"
             default 10000
     endmenu
 
+    menu "Engine"
+        config COOLANT_STALE_MS
+            int "Coolant temperature stale timeout, 0x5DA (ms)"
+            default 1000
+            help
+                Issue #17. Same convention as STALE_DISPLAY_MS -- shown as
+                unavailable past this, not a fault.
+
+        config COOLANT_CAUTION_UNDER_C
+            int "Coolant caution threshold (degC, below -- still warming up)"
+            default 60
+            help
+                Issue #17. Placeholder: a cold engine is normal, not a
+                fault, so this is informational (amber) rather than a
+                genuine warning.
+
+        config COOLANT_ALERT_UNDER_C
+            int "Coolant alert threshold (degC, below)"
+            default -40
+            help
+                Effectively disabled (the sensor's own floor) -- there is
+                no real "too cold" fault condition for an engine.
+
+        config COOLANT_CAUTION_OVER_C
+            int "Coolant caution threshold (degC, above)"
+            default 105
+            help
+                Placeholder pending confirmation against this car's
+                specific thermostat/fan thresholds.
+
+        config COOLANT_ALERT_OVER_C
+            int "Coolant alert threshold (degC, above)"
+            default 115
+    endmenu
+
 endmenu

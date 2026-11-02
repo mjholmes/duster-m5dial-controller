@@ -7,6 +7,7 @@
 #include "brightness.h"
 #include "can_signals.h"
 #include "tyre_logic.h"
+#include "engine_logic.h"
 
 static int s_checks, s_failures;
 
@@ -316,6 +317,15 @@ static void test_can_decode(void)
     CHECK(can_decode(0x3B7, false, false, temp, 5, &d) == CAN_DEC_MALFORMED);
     CHECK(can_decode(0x3BF, false, false, temp, 6, &d) == CAN_DEC_NOT_SUBSCRIBED);
 
+    // Coolant: same byte0 - 40 formula, DLC 8 (docs/can-signals.md, issue #17).
+    const uint8_t coolant_warm[8] = { 0x5A };  // 90 - 40 = 50 degC
+    CHECK(can_decode(0x5DA, false, false, coolant_warm, 8, &d) == CAN_DEC_OK && d.coolant_temp_c == 50);
+    const uint8_t coolant_cold[8] = { 0x00 };  // 0 - 40 = -40 degC (cold start)
+    CHECK(can_decode(0x5DA, false, false, coolant_cold, 8, &d) == CAN_DEC_OK && d.coolant_temp_c == -40);
+    const uint8_t coolant_hot[8] = { 0xFF };   // 255 - 40 = 215 degC (DBC max)
+    CHECK(can_decode(0x5DA, false, false, coolant_hot, 8, &d) == CAN_DEC_OK && d.coolant_temp_c == 215);
+    CHECK(can_decode(0x5DA, false, false, coolant_warm, 7, &d) == CAN_DEC_MALFORMED);
+
     // Field notes: 0x5DE byte 0 0x09 = main beam and front fog on.
     const uint8_t lights[8] = { 0x09 };
     CHECK(can_decode(0x5DE, false, false, lights, 8, &d) == CAN_DEC_OK);
@@ -477,6 +487,18 @@ static void test_tyre_logic(void)
     CHECK(!tyre_warn_update(&flicker, false, 3400, 2000, 10000)); // never raised, so nothing to clear
 }
 
+static void test_engine_logic(void)
+{
+    // coolant_severity: caution_under 60, alert_under -40, caution_over 105, alert_over 115.
+    CHECK(coolant_severity(90, true, 60, -40, 105, 115) == TYRE_SEV_NODATA);   // stale
+    CHECK(coolant_severity(90, false, 60, -40, 105, 115) == TYRE_SEV_OK);      // normal
+    CHECK(coolant_severity(50, false, 60, -40, 105, 115) == TYRE_SEV_CAUTION); // still warming up
+    CHECK(coolant_severity(-40, false, 60, -40, 105, 115) == TYRE_SEV_CAUTION); // at the alert_under floor, not below it, but still < caution_under
+    CHECK(coolant_severity(-41, false, 60, -40, 105, 115) == TYRE_SEV_ALERT);  // below the sensor floor
+    CHECK(coolant_severity(110, false, 60, -40, 105, 115) == TYRE_SEV_CAUTION); // approaching overheat
+    CHECK(coolant_severity(116, false, 60, -40, 105, 115) == TYRE_SEV_ALERT);  // overheating
+}
+
 void run_obd_tests(void);
 extern int g_obd_checks, g_obd_failures;
 
@@ -501,6 +523,7 @@ int main(void)
     test_can_decode();
     test_tyre_decode();
     test_tyre_logic();
+    test_engine_logic();
     run_obd_tests();
     s_checks += g_obd_checks;
     s_failures += g_obd_failures;

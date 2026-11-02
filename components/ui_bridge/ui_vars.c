@@ -12,12 +12,15 @@
 #include "sdkconfig.h"
 #include "settings.h"
 #include "ota_client.h"
+#include "engine_logic.h"
 
 static const char *TAG = "ui_vars";
 
 static ui_model_t s_snap;
 static char s_speed[4];
 static char s_temp[8];
+static char s_coolant_temp[12];  // int16_t range in the format string, not just -40..215
+static tyre_severity_t s_coolant_sev;
 static char s_dtc_count[4];
 static const char *s_comms_text = "";
 static uint32_t s_speed_shown_ms;
@@ -76,6 +79,17 @@ void ui_vars_refresh(uint32_t now_ms)
     } else {
         snprintf(s_temp, sizeof(s_temp), "%d\xC2\xB0" "C", s_snap.ext_temp_c);
     }
+
+    // Coolant (issue #17): same under/over-threshold shape as tyre pressure.
+    s_coolant_sev = coolant_severity(s_snap.coolant_temp_c, s_snap.coolant_stale,
+                                      CONFIG_COOLANT_CAUTION_UNDER_C, CONFIG_COOLANT_ALERT_UNDER_C,
+                                      CONFIG_COOLANT_CAUTION_OVER_C, CONFIG_COOLANT_ALERT_OVER_C);
+    if (s_snap.coolant_stale) {
+        snprintf(s_coolant_temp, sizeof(s_coolant_temp), "--");
+    } else {
+        snprintf(s_coolant_temp, sizeof(s_coolant_temp), "%d\xC2\xB0" "C", s_snap.coolant_temp_c);
+    }
+
     // DTC (SPEC 8.4). Until the OBD client exists (step 6) the status stays
     // DTC_NOT_READ and nothing is shown.
     if (s_snap.dtc.count > 0) {
@@ -243,6 +257,7 @@ const ui_model_t *ui_vars_model(void)
 
 tyre_severity_t ui_vars_tyre_pressure_severity(tyre_pos_t pos) { return s_tyre_sev[pos]; }
 tyre_severity_t ui_vars_wheel_slip_severity(tyre_pos_t pos) { return s_slip_sev[pos]; }
+tyre_severity_t ui_vars_coolant_severity(void) { return s_coolant_sev; }
 
 const char *get_var_speed(void) { return s_speed; }
 const char *get_var_temperature(void) { return s_temp; }
@@ -252,6 +267,8 @@ bool get_var_is_auto_mode(void) { return s_snap.mode == MODE_AUTO; }
 // ACKed by the RA60: as best we know the light is on (SPEC 7.2).
 bool get_var_opstatus_ledbar(void) { return s_snap.aux_actual.ledbar; }
 bool get_var_opstatus_fog(void) { return s_snap.aux_actual.fog; }
+
+const char *get_var_coolant_temp_text(void) { return s_coolant_temp; }
 
 bool get_var_is_dtc_present(void) { return s_snap.dtc.count > 0 || s_snap.dtc.mil_on; }
 const char *get_var_dtc_count(void) { return s_dtc_count; }
@@ -310,6 +327,8 @@ void set_var_is_below_freezing(bool value) { (void)value; ignored("is_below_free
 void set_var_is_auto_mode(bool value) { (void)value; ignored("is_auto_mode"); }
 void set_var_opstatus_ledbar(bool value) { (void)value; ignored("opstatus_ledbar"); }
 void set_var_opstatus_fog(bool value) { (void)value; ignored("opstatus_fog"); }
+void set_var_coolant_temp_text(const char *value) { (void)value; ignored("coolant_temp_text"); }
+
 void set_var_is_dtc_present(bool value) { (void)value; ignored("is_dtc_present"); }
 void set_var_dtc_count(const char *value) { (void)value; ignored("dtc_count"); }
 void set_var_dtc_code_0(const char *value) { (void)value; ignored("dtc_code_0"); }

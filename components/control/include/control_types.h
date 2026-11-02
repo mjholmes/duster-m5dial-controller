@@ -89,6 +89,9 @@ typedef struct {
     bool     below_freezing;      // hysteresis, false when temp stale
     uint8_t  ignition_raw;        // 0x350 byte 0, 0 = not yet seen
     vehicle_lights_t veh;
+    // engine (issue #17)
+    int16_t  coolant_temp_c;      // -40..215, 0x5DA
+    bool     coolant_stale;
     // control
     op_mode_t mode;
     uint16_t last_applied_req_seq;

@@ -47,6 +47,7 @@ static uint32_t s_tpms_rx_ms;
 static uint32_t s_wheel_front_rx_ms;
 static uint32_t s_wheel_rear_rx_ms;
 static uint32_t s_etc_rx_ms;
+static uint32_t s_coolant_rx_ms;
 
 // control task only.
 static ctrl_core_t s_core;
@@ -96,6 +97,7 @@ static void publish(uint32_t now)
     m->wheel_speeds.stale = older_than(now, s_wheel_front_rx_ms, CONFIG_WHEEL_SPEED_STALE_MS) ||
                             older_than(now, s_wheel_rear_rx_ms, CONFIG_WHEEL_SPEED_STALE_MS);
     m->etc.stale = older_than(now, s_etc_rx_ms, CONFIG_ETC_STALE_MS);
+    m->coolant_stale = older_than(now, s_coolant_rx_ms, CONFIG_COOLANT_STALE_MS);
 
     m->frost_risk = ctrl_temp_flag(m->frost_risk, m->temp_stale, m->ext_temp_c,
                                    CONFIG_FROST_RISK_ON_C, CONFIG_TEMP_FLAG_HYSTERESIS_C);
@@ -268,6 +270,14 @@ void control_can_temp(int8_t temp_c, uint32_t rx_ms)
     xSemaphoreTake(s_lock, portMAX_DELAY);
     s_model.ext_temp_c = temp_c;
     s_temp_rx_ms = rx_ms;
+    xSemaphoreGive(s_lock);
+}
+
+void control_can_coolant_temp(int16_t temp_c, uint32_t rx_ms)
+{
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    s_model.coolant_temp_c = temp_c;
+    s_coolant_rx_ms = rx_ms;
     xSemaphoreGive(s_lock);
 }
 
