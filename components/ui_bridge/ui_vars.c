@@ -26,6 +26,12 @@ static char s_fuel_level[16];    // "42 L" -- litres, not percent (issue #17 ask
 
 // Settings + tyre remap flow (issue #1).
 static char s_settings_brightness[40];  // "Brightness: day 80%, night 40%"
+// Brightness screen (on-device feedback: editing only follows whichever of
+// day/night is currently active -- this screen lets either be adjusted
+// directly, independent of the car's actual light state).
+static bool s_brightness_edit_night;    // which row the encoder adjusts
+static char s_brightness_day[16];       // "- Day: 80%" / "  Day: 80%"
+static char s_brightness_night[16];     // "- Night: 40%" / "  Night: 40%"
 static tyre_remap_t s_remap;
 static char s_remap_step[16];           // "1/4"
 static char s_remap_corner[16];         // "FRONT LEFT"
@@ -167,6 +173,10 @@ void ui_vars_refresh(uint32_t now_ms)
     // s_tyre_text[] (indexed by raw CAN corner, unmapped) is current.
     snprintf(s_settings_brightness, sizeof(s_settings_brightness), "Brightness: day %d%%, night %d%%",
              settings_brightness_pct(false), settings_brightness_pct(true));
+    snprintf(s_brightness_day, sizeof(s_brightness_day), "%s Day: %d%%",
+             s_brightness_edit_night ? " " : "-", settings_brightness_pct(false));
+    snprintf(s_brightness_night, sizeof(s_brightness_night), "%s Night: %d%%",
+             s_brightness_edit_night ? "-" : " ", settings_brightness_pct(true));
     {
         int step = s_remap.step < 4 ? s_remap.step : 3;
         snprintf(s_remap_step, sizeof(s_remap_step), "%d/4", step + 1);
@@ -324,6 +334,10 @@ bool get_var_opstatus_fog(void) { return s_snap.aux_actual.fog; }
 const char *get_var_coolant_temp_text(void) { return s_coolant_temp; }
 const char *get_var_fuel_level_text(void) { return s_fuel_level; }
 const char *get_var_settings_brightness_text(void) { return s_settings_brightness; }
+const char *get_var_brightness_day_text(void) { return s_brightness_day; }
+const char *get_var_brightness_night_text(void) { return s_brightness_night; }
+bool ui_vars_brightness_editing_night(void) { return s_brightness_edit_night; }
+void ui_vars_brightness_select(bool night) { s_brightness_edit_night = night; }
 const char *get_var_remap_step_text(void) { return s_remap_step; }
 const char *get_var_remap_corner_text(void) { return s_remap_corner; }
 const char *get_var_remap_psi_text(void) { return s_remap_psi; }
@@ -390,6 +404,8 @@ void set_var_opstatus_fog(bool value) { (void)value; ignored("opstatus_fog"); }
 void set_var_coolant_temp_text(const char *value) { (void)value; ignored("coolant_temp_text"); }
 void set_var_fuel_level_text(const char *value) { (void)value; ignored("fuel_level_text"); }
 void set_var_settings_brightness_text(const char *value) { (void)value; ignored("settings_brightness_text"); }
+void set_var_brightness_day_text(const char *value) { (void)value; ignored("brightness_day_text"); }
+void set_var_brightness_night_text(const char *value) { (void)value; ignored("brightness_night_text"); }
 void set_var_remap_step_text(const char *value) { (void)value; ignored("remap_step_text"); }
 void set_var_remap_corner_text(const char *value) { (void)value; ignored("remap_corner_text"); }
 void set_var_remap_psi_text(const char *value) { (void)value; ignored("remap_psi_text"); }

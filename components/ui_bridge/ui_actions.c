@@ -170,6 +170,35 @@ void action_tyre_remap_confirm(lv_event_t *e)
     }
 }
 
+// GitHub issue #1 follow-up (on-device feedback): a consistent way back to
+// Settings from any of its sub-screens, instead of relying solely on the
+// universal swipe-up/down-to-Speedo shortcut.
+void action_switchto_screen_settings(lv_event_t *e)
+{
+    (void)e;
+    switch_to(objects.settings, SCREEN_ID_SETTINGS);
+}
+
+// GitHub issue #1 follow-up: the Settings "Brightness" row opens a screen
+// where day and night can both be adjusted, not just whichever is active.
+void action_switchto_screen_brightness(lv_event_t *e)
+{
+    (void)e;
+    switch_to(objects.brightness, SCREEN_ID_BRIGHTNESS);
+}
+
+void action_select_brightness_day(lv_event_t *e)
+{
+    (void)e;
+    ui_vars_brightness_select(false);
+}
+
+void action_select_brightness_night(lv_event_t *e)
+{
+    (void)e;
+    ui_vars_brightness_select(true);
+}
+
 void action_action_ota_select_stable(lv_event_t *e)
 {
     (void)e;

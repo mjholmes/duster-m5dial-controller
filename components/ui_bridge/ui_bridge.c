@@ -45,6 +45,12 @@ static void handle_button(button_fsm_t *btn, uint32_t now_ms)
     control_request(&req);
 }
 
+static const brightness_cfg_t s_brightness_cfg = {
+    .min_pct = CONFIG_DISPLAY_BRIGHTNESS_MIN_PCT,
+    .max_pct = 100,
+    .step_pct = CONFIG_DISPLAY_BRIGHTNESS_STEP_PCT,
+};
+
 // Encoder sets display brightness (decided; replaces LVGL focus navigation).
 // Day and night levels are separate saved settings; the encoder adjusts the
 // one currently shown. Night follows dipped beam (brightness_night_step()).
@@ -53,11 +59,6 @@ static void handle_button(button_fsm_t *btn, uint32_t now_ms)
 // screen is active.
 static void handle_brightness(const ui_model_t *m, bool *night, int *shown_pct, int32_t detents)
 {
-    static const brightness_cfg_t cfg = {
-        .min_pct = CONFIG_DISPLAY_BRIGHTNESS_MIN_PCT,
-        .max_pct = 100,
-        .step_pct = CONFIG_DISPLAY_BRIGHTNESS_STEP_PCT,
-    };
     bool was_night = *night;
     *night = brightness_night_step(*night, !m->can_timeout, m->veh.dipped_beam, m->veh.main_beam);
     if (*night != was_night) {
@@ -65,7 +66,7 @@ static void handle_brightness(const ui_model_t *m, bool *night, int *shown_pct, 
     }
 
     if (detents != 0) {
-        settings_set_brightness_pct(*night, brightness_step(settings_brightness_pct(*night), detents, &cfg));
+        settings_set_brightness_pct(*night, brightness_step(settings_brightness_pct(*night), detents, &s_brightness_cfg));
     }
 
     int pct = settings_brightness_pct(*night);
@@ -101,11 +102,28 @@ static void ui_task(void *arg)
         ui_styles_update();
 
         int32_t detents = board_encoder_take();
-        if (lv_display_get_screen_active(lv_display_get_default()) == objects.tyre_remap) {
+        lv_obj_t *active_screen = lv_display_get_screen_active(lv_display_get_default());
+        if (active_screen == objects.tyre_remap) {
             // Issue #1: on the remap screen, the encoder cycles the
             // current step's candidate instead of adjusting brightness.
             if (detents != 0) {
                 tyre_remap_rotate(ui_vars_remap_state(), detents > 0 ? 1 : -1);
+            }
+        } else if (active_screen == objects.brightness) {
+            // Issue #1 follow-up: on the Brightness screen, the encoder
+            // adjusts whichever of day/night is selected there, previewed
+            // live on the display regardless of the car's actual light
+            // state (otherwise there's no way to see the effect of editing
+            // the inactive one).
+            bool edit_night = ui_vars_brightness_editing_night();
+            if (detents != 0) {
+                settings_set_brightness_pct(edit_night,
+                    brightness_step(settings_brightness_pct(edit_night), detents, &s_brightness_cfg));
+            }
+            int pct = settings_brightness_pct(edit_night);
+            if (pct != shown_pct) {
+                shown_pct = pct;
+                board_display_brightness(brightness_to_level(pct));
             }
         } else {
             handle_brightness(ui_vars_model(), &night, &shown_pct, detents);

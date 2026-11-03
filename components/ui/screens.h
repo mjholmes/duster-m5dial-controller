@@ -20,7 +20,8 @@ enum ScreensEnum {
     SCREEN_ID_ENGINE = 7,
     SCREEN_ID_SETTINGS = 8,
     SCREEN_ID_TYRE_REMAP = 9,
-    _SCREEN_ID_LAST = 9
+    SCREEN_ID_BRIGHTNESS = 10,
+    _SCREEN_ID_LAST = 10
 };
 
 typedef struct _objects_t {
@@ -33,6 +34,7 @@ typedef struct _objects_t {
     lv_obj_t *engine;
     lv_obj_t *settings;
     lv_obj_t *tyre_remap;
+    lv_obj_t *brightness;
     lv_obj_t *speed_value;
     lv_obj_t *obj0;
     lv_obj_t *thermometer_label;
@@ -86,6 +88,7 @@ typedef struct _objects_t {
     lv_obj_t *ota_select_beta;
     lv_obj_t *ota_status_text;
     lv_obj_t *ota_action_button;
+    lv_obj_t *ota_back_row;
     lv_obj_t *obj4;
     lv_obj_t *dtc_codes_header;
     lv_obj_t *dtc_code_0;
@@ -110,6 +113,11 @@ typedef struct _objects_t {
     lv_obj_t *remap_corner;
     lv_obj_t *remap_psi_value;
     lv_obj_t *remap_can_corner;
+    lv_obj_t *remap_back;
+    lv_obj_t *brightness_header;
+    lv_obj_t *brightness_day_row;
+    lv_obj_t *brightness_night_row;
+    lv_obj_t *brightness_back;
 } objects_t;
 
 extern objects_t objects;
@@ -140,6 +148,9 @@ void tick_screen_settings();
 
 void create_screen_tyre_remap();
 void tick_screen_tyre_remap();
+
+void create_screen_brightness();
+void tick_screen_brightness();
 
 void tick_screen_by_id(enum ScreensEnum screenId);
 void tick_screen(int screen_index);

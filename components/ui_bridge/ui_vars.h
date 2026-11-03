@@ -30,6 +30,15 @@ void set_var_fuel_level_text(const char *value);
 // status as the Engine getters above until their screens exist.
 const char *get_var_settings_brightness_text(void);
 void set_var_settings_brightness_text(const char *value);
+// Brightness screen: day/night rows can be edited independent of the car's
+// actual light state (on-device feedback: previously the encoder only ever
+// touched whichever of day/night was currently active).
+const char *get_var_brightness_day_text(void);
+void set_var_brightness_day_text(const char *value);
+const char *get_var_brightness_night_text(void);
+void set_var_brightness_night_text(const char *value);
+bool ui_vars_brightness_editing_night(void);
+void ui_vars_brightness_select(bool night);
 const char *get_var_remap_step_text(void);
 void set_var_remap_step_text(const char *value);
 const char *get_var_remap_corner_text(void);
