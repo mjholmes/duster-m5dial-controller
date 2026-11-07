@@ -47,6 +47,8 @@ static uint32_t s_tpms_rx_ms;
 static uint32_t s_wheel_front_rx_ms;
 static uint32_t s_wheel_rear_rx_ms;
 static uint32_t s_etc_rx_ms;
+static uint32_t s_coolant_rx_ms;
+static uint32_t s_fuel_rx_ms;
 
 // control task only.
 static ctrl_core_t s_core;
@@ -96,6 +98,8 @@ static void publish(uint32_t now)
     m->wheel_speeds.stale = older_than(now, s_wheel_front_rx_ms, CONFIG_WHEEL_SPEED_STALE_MS) ||
                             older_than(now, s_wheel_rear_rx_ms, CONFIG_WHEEL_SPEED_STALE_MS);
     m->etc.stale = older_than(now, s_etc_rx_ms, CONFIG_ETC_STALE_MS);
+    m->coolant_stale = older_than(now, s_coolant_rx_ms, CONFIG_COOLANT_STALE_MS);
+    m->fuel_stale = older_than(now, s_fuel_rx_ms, CONFIG_FUEL_STALE_MS);
 
     m->frost_risk = ctrl_temp_flag(m->frost_risk, m->temp_stale, m->ext_temp_c,
                                    CONFIG_FROST_RISK_ON_C, CONFIG_TEMP_FLAG_HYSTERESIS_C);
@@ -225,12 +229,24 @@ esp_err_t control_start(void)
         .aux_mismatch_ms = CONFIG_AUX_MISMATCH_MS,
     };
     ctrl_core_init(&s_core, &cfg);
-    // Every source reads as stale until its first data arrives.
+    // Every source reads as stale until its first data arrives. Without
+    // this, a zero-initialised rx_ms reads as "fresh" for up to that
+    // source's own stale window after boot, since now - 0 hasn't yet
+    // reached the limit -- invisible for fast CAN broadcasts (window is
+    // ~1s) but very visible for OBD-polled fuel, which only updates once
+    // the engine's been running long enough for a poll round, and showed
+    // as a bogus "0 L" instead of "--" until then.
     uint32_t now = now_ms();
     s_speed_rx_ms = now - CONFIG_STALE_DISPLAY_MS;
     s_temp_rx_ms = now - CONFIG_STALE_DISPLAY_MS;
     s_lights_rx_ms = now - CONFIG_CAN_LIGHTS_TIMEOUT_MS;
     s_aux_rx_ms = now - CONFIG_AUX_LINK_TIMEOUT_MS;
+    s_tpms_rx_ms = now - CONFIG_TPMS_STALE_MS;
+    s_wheel_front_rx_ms = now - CONFIG_WHEEL_SPEED_STALE_MS;
+    s_wheel_rear_rx_ms = now - CONFIG_WHEEL_SPEED_STALE_MS;
+    s_etc_rx_ms = now - CONFIG_ETC_STALE_MS;
+    s_coolant_rx_ms = now - CONFIG_COOLANT_STALE_MS;
+    s_fuel_rx_ms = now - CONFIG_FUEL_STALE_MS;
     s_model = (ui_model_t){
         .mode = MODE_MANUAL,
         .speed_stale = true,
@@ -268,6 +284,14 @@ void control_can_temp(int8_t temp_c, uint32_t rx_ms)
     xSemaphoreTake(s_lock, portMAX_DELAY);
     s_model.ext_temp_c = temp_c;
     s_temp_rx_ms = rx_ms;
+    xSemaphoreGive(s_lock);
+}
+
+void control_can_coolant_temp(int16_t temp_c, uint32_t rx_ms)
+{
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    s_model.coolant_temp_c = temp_c;
+    s_coolant_rx_ms = rx_ms;
     xSemaphoreGive(s_lock);
 }
 
@@ -323,6 +347,14 @@ void control_obd_dtc(const dtc_state_t *dtc)
 {
     xSemaphoreTake(s_lock, portMAX_DELAY);
     s_model.dtc = *dtc;
+    xSemaphoreGive(s_lock);
+}
+
+void control_obd_fuel_level(uint8_t pct, uint32_t rx_ms)
+{
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    s_model.fuel_level_pct = pct;
+    s_fuel_rx_ms = rx_ms;
     xSemaphoreGive(s_lock);
 }
 

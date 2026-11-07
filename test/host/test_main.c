@@ -7,6 +7,8 @@
 #include "brightness.h"
 #include "can_signals.h"
 #include "tyre_logic.h"
+#include "engine_logic.h"
+#include "tyre_remap_flow.h"
 
 static int s_checks, s_failures;
 
@@ -316,6 +318,15 @@ static void test_can_decode(void)
     CHECK(can_decode(0x3B7, false, false, temp, 5, &d) == CAN_DEC_MALFORMED);
     CHECK(can_decode(0x3BF, false, false, temp, 6, &d) == CAN_DEC_NOT_SUBSCRIBED);
 
+    // Coolant: same byte0 - 40 formula, DLC 8 (docs/can-signals.md, issue #17).
+    const uint8_t coolant_warm[8] = { 0x5A };  // 90 - 40 = 50 degC
+    CHECK(can_decode(0x5DA, false, false, coolant_warm, 8, &d) == CAN_DEC_OK && d.coolant_temp_c == 50);
+    const uint8_t coolant_cold[8] = { 0x00 };  // 0 - 40 = -40 degC (cold start)
+    CHECK(can_decode(0x5DA, false, false, coolant_cold, 8, &d) == CAN_DEC_OK && d.coolant_temp_c == -40);
+    const uint8_t coolant_hot[8] = { 0xFF };   // 255 - 40 = 215 degC (DBC max)
+    CHECK(can_decode(0x5DA, false, false, coolant_hot, 8, &d) == CAN_DEC_OK && d.coolant_temp_c == 215);
+    CHECK(can_decode(0x5DA, false, false, coolant_warm, 7, &d) == CAN_DEC_MALFORMED);
+
     // Field notes: 0x5DE byte 0 0x09 = main beam and front fog on.
     const uint8_t lights[8] = { 0x09 };
     CHECK(can_decode(0x5DE, false, false, lights, 8, &d) == CAN_DEC_OK);
@@ -475,6 +486,80 @@ static void test_tyre_logic(void)
     CHECK(!tyre_warn_update(&flicker, true, 1000, 2000, 10000));  // held 1000ms, not yet 2000
     CHECK(!tyre_warn_update(&flicker, false, 1500, 2000, 10000)); // flips back: timer resets
     CHECK(!tyre_warn_update(&flicker, false, 3400, 2000, 10000)); // never raised, so nothing to clear
+
+    // tyre_map_is_valid (issue #1): must be a permutation of 0..3.
+    const uint8_t identity[4] = { 0, 1, 2, 3 };
+    CHECK(tyre_map_is_valid(identity));
+    const uint8_t swapped[4] = { 1, 0, 3, 2 };
+    CHECK(tyre_map_is_valid(swapped));
+    const uint8_t dup[4] = { 0, 0, 2, 3 };          // 0 used twice, 1 missing
+    CHECK(!tyre_map_is_valid(dup));
+    const uint8_t out_of_range[4] = { 0, 1, 2, 4 }; // 4 is out of range
+    CHECK(!tyre_map_is_valid(out_of_range));
+    const uint8_t all_same[4] = { 2, 2, 2, 2 };
+    CHECK(!tyre_map_is_valid(all_same));
+}
+
+static void test_tyre_remap_flow(void)
+{
+    tyre_remap_t r;
+    tyre_remap_start(&r);
+    CHECK(r.step == 0);
+
+    // Step 0 (FL): all 4 candidates available, default to the first (0=FL).
+    CHECK(tyre_remap_candidate(&r) == 0);
+    tyre_remap_rotate(&r, 1);
+    CHECK(tyre_remap_candidate(&r) == 1);
+    tyre_remap_rotate(&r, 1);
+    tyre_remap_rotate(&r, 1);
+    tyre_remap_rotate(&r, 1);                      // wraps back to the first
+    CHECK(tyre_remap_candidate(&r) == 0);
+
+    // Confirm FL -> CAN corner 2 (RL).
+    tyre_remap_rotate(&r, -1);
+    CHECK(tyre_remap_candidate(&r) == 3);           // wrapped the other way
+    tyre_remap_rotate(&r, -1);
+    CHECK(tyre_remap_candidate(&r) == 2);
+    uint8_t out[4];
+    CHECK(!tyre_remap_confirm(&r, out));            // 1 of 4 done
+    CHECK(r.step == 1 && r.assigned[0] == 2);
+
+    // Step 1 (FR): candidate 2 must no longer be offered -- pool is {0,1,3}.
+    CHECK(tyre_remap_candidate(&r) == 0);
+    tyre_remap_rotate(&r, -1);
+    CHECK(tyre_remap_candidate(&r) == 3);           // wraps within the 3 remaining, skipping 2
+    CHECK(!tyre_remap_confirm(&r, out));            // confirm FR -> 3 (RR)
+
+    // Step 2 (RL): pool is {0,1}.
+    CHECK(tyre_remap_candidate(&r) == 0);
+    tyre_remap_rotate(&r, 1);
+    CHECK(tyre_remap_candidate(&r) == 1);
+    CHECK(!tyre_remap_confirm(&r, out));            // confirm RL -> 1 (FR)
+
+    // Step 3 (RR): only one candidate left, no rotation possible.
+    CHECK(tyre_remap_candidate(&r) == 0);
+    tyre_remap_rotate(&r, 1);                       // no-op: n < 2
+    CHECK(tyre_remap_candidate(&r) == 0);
+    CHECK(tyre_remap_confirm(&r, out));             // done: all 4 assigned
+    CHECK(out[0] == 2 && out[1] == 3 && out[2] == 1 && out[3] == 0);
+    CHECK(tyre_map_is_valid(out));                  // always a valid permutation by construction
+
+    // Defensive: confirming again after completion must not write out of
+    // bounds (r->step == 4) -- should just return the same result.
+    uint8_t out2[4];
+    CHECK(tyre_remap_confirm(&r, out2));
+    CHECK(out2[0] == 2 && out2[1] == 3 && out2[2] == 1 && out2[3] == 0);
+}
+
+static void test_engine_logic(void)
+{
+    // coolant_color_class: cold_under 60, hot_over 105.
+    CHECK(coolant_color_class(90, true, 60, 105) == COOLANT_COLOR_NORMAL);  // stale
+    CHECK(coolant_color_class(90, false, 60, 105) == COOLANT_COLOR_NORMAL); // normal
+    CHECK(coolant_color_class(60, false, 60, 105) == COOLANT_COLOR_NORMAL); // at the cold floor, not below it
+    CHECK(coolant_color_class(59, false, 60, 105) == COOLANT_COLOR_COLD);   // still warming up
+    CHECK(coolant_color_class(105, false, 60, 105) == COOLANT_COLOR_NORMAL); // at the hot ceiling, not above it
+    CHECK(coolant_color_class(106, false, 60, 105) == COOLANT_COLOR_HOT);   // overheating
 }
 
 void run_obd_tests(void);
@@ -501,6 +586,8 @@ int main(void)
     test_can_decode();
     test_tyre_decode();
     test_tyre_logic();
+    test_engine_logic();
+    test_tyre_remap_flow();
     run_obd_tests();
     s_checks += g_obd_checks;
     s_failures += g_obd_failures;

@@ -108,6 +108,22 @@ static void apply_coupler_bar(lv_obj_t *obj, bool *cached, coupler_vis_t state)
     *cached = want;
 }
 
+// Coolant text colour (on-device feedback: no box, just the number tinted --
+// blue too cold, red too hot, the UI's default colour otherwise).
+static void apply_coolant_color(lv_obj_t *obj, coolant_color_t *cached, coolant_color_t want)
+{
+    if (*cached == want) {
+        return;
+    }
+    static const uint32_t colors[] = {
+        [COOLANT_COLOR_NORMAL] = 0xe0e0e0,
+        [COOLANT_COLOR_COLD]   = 0x3fa9f5,
+        [COOLANT_COLOR_HOT]    = 0xe63c32,
+    };
+    lv_obj_set_style_text_color(obj, lv_color_hex(colors[want]), LV_PART_MAIN | LV_STATE_DEFAULT);
+    *cached = want;
+}
+
 void ui_styles_update(void)
 {
     static tyre_severity_t s_pressure_fill[TYRE_COUNT];
@@ -116,6 +132,9 @@ void ui_styles_update(void)
     static coupler_vis_t    s_ring_cached[2];
     static int              s_fill_cached[2];
     static bool             s_bar_cached[2];
+    // Zero-init (COOLANT_COLOR_NORMAL) matches coolant_temp_value's own
+    // baked-in default colour, same convention as apply_tyre_fill below.
+    static coolant_color_t s_coolant_color_cached;
 
     lv_obj_t *const tyre_objs[TYRE_COUNT]    = { objects.tyre_fl, objects.tyre_fr, objects.tyre_rl, objects.tyre_rr };
     lv_obj_t *const wd_tyre_objs[TYRE_COUNT] = { objects.wd_tyre_fl, objects.wd_tyre_fr, objects.wd_tyre_rl, objects.wd_tyre_rr };
@@ -136,4 +155,8 @@ void ui_styles_update(void)
         apply_coupler_fill(coupler_fill_objs[i], &s_fill_cached[i], coup);
         apply_coupler_bar(coupler_bar_objs[i], &s_bar_cached[i], coup);
     }
+
+    // Engine screen (issue #17; on-device feedback replaced the coloured
+    // box with a tinted number -- no container, no named style).
+    apply_coolant_color(objects.coolant_temp_value, &s_coolant_color_cached, ui_vars_coolant_color());
 }
