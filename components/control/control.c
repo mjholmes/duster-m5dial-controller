@@ -229,12 +229,24 @@ esp_err_t control_start(void)
         .aux_mismatch_ms = CONFIG_AUX_MISMATCH_MS,
     };
     ctrl_core_init(&s_core, &cfg);
-    // Every source reads as stale until its first data arrives.
+    // Every source reads as stale until its first data arrives. Without
+    // this, a zero-initialised rx_ms reads as "fresh" for up to that
+    // source's own stale window after boot, since now - 0 hasn't yet
+    // reached the limit -- invisible for fast CAN broadcasts (window is
+    // ~1s) but very visible for OBD-polled fuel, which only updates once
+    // the engine's been running long enough for a poll round, and showed
+    // as a bogus "0 L" instead of "--" until then.
     uint32_t now = now_ms();
     s_speed_rx_ms = now - CONFIG_STALE_DISPLAY_MS;
     s_temp_rx_ms = now - CONFIG_STALE_DISPLAY_MS;
     s_lights_rx_ms = now - CONFIG_CAN_LIGHTS_TIMEOUT_MS;
     s_aux_rx_ms = now - CONFIG_AUX_LINK_TIMEOUT_MS;
+    s_tpms_rx_ms = now - CONFIG_TPMS_STALE_MS;
+    s_wheel_front_rx_ms = now - CONFIG_WHEEL_SPEED_STALE_MS;
+    s_wheel_rear_rx_ms = now - CONFIG_WHEEL_SPEED_STALE_MS;
+    s_etc_rx_ms = now - CONFIG_ETC_STALE_MS;
+    s_coolant_rx_ms = now - CONFIG_COOLANT_STALE_MS;
+    s_fuel_rx_ms = now - CONFIG_FUEL_STALE_MS;
     s_model = (ui_model_t){
         .mode = MODE_MANUAL,
         .speed_stale = true,

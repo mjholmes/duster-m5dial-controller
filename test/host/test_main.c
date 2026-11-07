@@ -553,14 +553,13 @@ static void test_tyre_remap_flow(void)
 
 static void test_engine_logic(void)
 {
-    // coolant_severity: caution_under 60, alert_under -40, caution_over 105, alert_over 115.
-    CHECK(coolant_severity(90, true, 60, -40, 105, 115) == TYRE_SEV_NODATA);   // stale
-    CHECK(coolant_severity(90, false, 60, -40, 105, 115) == TYRE_SEV_OK);      // normal
-    CHECK(coolant_severity(50, false, 60, -40, 105, 115) == TYRE_SEV_CAUTION); // still warming up
-    CHECK(coolant_severity(-40, false, 60, -40, 105, 115) == TYRE_SEV_CAUTION); // at the alert_under floor, not below it, but still < caution_under
-    CHECK(coolant_severity(-41, false, 60, -40, 105, 115) == TYRE_SEV_ALERT);  // below the sensor floor
-    CHECK(coolant_severity(110, false, 60, -40, 105, 115) == TYRE_SEV_CAUTION); // approaching overheat
-    CHECK(coolant_severity(116, false, 60, -40, 105, 115) == TYRE_SEV_ALERT);  // overheating
+    // coolant_color_class: cold_under 60, hot_over 105.
+    CHECK(coolant_color_class(90, true, 60, 105) == COOLANT_COLOR_NORMAL);  // stale
+    CHECK(coolant_color_class(90, false, 60, 105) == COOLANT_COLOR_NORMAL); // normal
+    CHECK(coolant_color_class(60, false, 60, 105) == COOLANT_COLOR_NORMAL); // at the cold floor, not below it
+    CHECK(coolant_color_class(59, false, 60, 105) == COOLANT_COLOR_COLD);   // still warming up
+    CHECK(coolant_color_class(105, false, 60, 105) == COOLANT_COLOR_NORMAL); // at the hot ceiling, not above it
+    CHECK(coolant_color_class(106, false, 60, 105) == COOLANT_COLOR_HOT);   // overheating
 }
 
 void run_obd_tests(void);

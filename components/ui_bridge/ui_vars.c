@@ -21,7 +21,7 @@ static ui_model_t s_snap;
 static char s_speed[4];
 static char s_temp[8];
 static char s_coolant_temp[12];  // int16_t range in the format string, not just -40..215
-static tyre_severity_t s_coolant_sev;
+static coolant_color_t s_coolant_color;
 static char s_fuel_level[16];    // "42 L" -- litres, not percent (issue #17 asks for litres)
 
 // Settings + tyre remap flow (issue #1).
@@ -30,8 +30,8 @@ static char s_settings_brightness[40];  // "Brightness: day 80%, night 40%"
 // day/night is currently active -- this screen lets either be adjusted
 // directly, independent of the car's actual light state).
 static bool s_brightness_edit_night;    // which row the encoder adjusts
-static char s_brightness_day[16];       // "- Day: 80%" / "  Day: 80%"
-static char s_brightness_night[16];     // "- Night: 40%" / "  Night: 40%"
+static char s_brightness_day[16];       // "Day: 80%"
+static char s_brightness_night[16];     // "Night: 40%"
 static tyre_remap_t s_remap;
 static char s_remap_step[16];           // "1/4"
 static char s_remap_corner[16];         // "FRONT LEFT"
@@ -117,10 +117,9 @@ void ui_vars_refresh(uint32_t now_ms)
         snprintf(s_temp, sizeof(s_temp), "%d\xC2\xB0" "C", s_snap.ext_temp_c);
     }
 
-    // Coolant (issue #17): same under/over-threshold shape as tyre pressure.
-    s_coolant_sev = coolant_severity(s_snap.coolant_temp_c, s_snap.coolant_stale,
-                                      CONFIG_COOLANT_CAUTION_UNDER_C, CONFIG_COOLANT_ALERT_UNDER_C,
-                                      CONFIG_COOLANT_CAUTION_OVER_C, CONFIG_COOLANT_ALERT_OVER_C);
+    // Coolant (issue #17; on-device feedback: text colour, not a box).
+    s_coolant_color = coolant_color_class(s_snap.coolant_temp_c, s_snap.coolant_stale,
+                                           CONFIG_COOLANT_COLD_UNDER_C, CONFIG_COOLANT_HOT_OVER_C);
     if (s_snap.coolant_stale) {
         snprintf(s_coolant_temp, sizeof(s_coolant_temp), "--");
     } else {
@@ -173,10 +172,10 @@ void ui_vars_refresh(uint32_t now_ms)
     // s_tyre_text[] (indexed by raw CAN corner, unmapped) is current.
     snprintf(s_settings_brightness, sizeof(s_settings_brightness), "Brightness: day %d%%, night %d%%",
              settings_brightness_pct(false), settings_brightness_pct(true));
-    snprintf(s_brightness_day, sizeof(s_brightness_day), "%s Day: %d%%",
-             s_brightness_edit_night ? " " : "-", settings_brightness_pct(false));
-    snprintf(s_brightness_night, sizeof(s_brightness_night), "%s Night: %d%%",
-             s_brightness_edit_night ? "-" : " ", settings_brightness_pct(true));
+    // Selection itself is shown by the button's own CHECKED (green) state,
+    // not a text marker -- see tick_screen_brightness().
+    snprintf(s_brightness_day, sizeof(s_brightness_day), "Day: %d%%", settings_brightness_pct(false));
+    snprintf(s_brightness_night, sizeof(s_brightness_night), "Night: %d%%", settings_brightness_pct(true));
     {
         int step = s_remap.step < 4 ? s_remap.step : 3;
         snprintf(s_remap_step, sizeof(s_remap_step), "%d/4", step + 1);
@@ -320,7 +319,7 @@ const ui_model_t *ui_vars_model(void)
 
 tyre_severity_t ui_vars_tyre_pressure_severity(tyre_pos_t pos) { return s_tyre_sev[s_tyre_map[pos]]; }
 tyre_severity_t ui_vars_wheel_slip_severity(tyre_pos_t pos) { return s_slip_sev[pos]; }
-tyre_severity_t ui_vars_coolant_severity(void) { return s_coolant_sev; }
+coolant_color_t ui_vars_coolant_color(void) { return s_coolant_color; }
 
 const char *get_var_speed(void) { return s_speed; }
 const char *get_var_temperature(void) { return s_temp; }
@@ -336,6 +335,12 @@ const char *get_var_fuel_level_text(void) { return s_fuel_level; }
 const char *get_var_settings_brightness_text(void) { return s_settings_brightness; }
 const char *get_var_brightness_day_text(void) { return s_brightness_day; }
 const char *get_var_brightness_night_text(void) { return s_brightness_night; }
+// get_var_is_brightness_editing_night(): for tick_screen_brightness() (in
+// screens.c, which only ever calls get_var_*/set_var_*/action_*) to sync
+// the day/night buttons' CHECKED state. ui_vars_brightness_editing_night()
+// is the same value for ui_bridge.c, which isn't generated code and can
+// include ui_vars.h directly.
+bool get_var_is_brightness_editing_night(void) { return s_brightness_edit_night; }
 bool ui_vars_brightness_editing_night(void) { return s_brightness_edit_night; }
 void ui_vars_brightness_select(bool night) { s_brightness_edit_night = night; }
 const char *get_var_remap_step_text(void) { return s_remap_step; }
@@ -406,6 +411,7 @@ void set_var_fuel_level_text(const char *value) { (void)value; ignored("fuel_lev
 void set_var_settings_brightness_text(const char *value) { (void)value; ignored("settings_brightness_text"); }
 void set_var_brightness_day_text(const char *value) { (void)value; ignored("brightness_day_text"); }
 void set_var_brightness_night_text(const char *value) { (void)value; ignored("brightness_night_text"); }
+void set_var_is_brightness_editing_night(bool value) { (void)value; ignored("is_brightness_editing_night"); }
 void set_var_remap_step_text(const char *value) { (void)value; ignored("remap_step_text"); }
 void set_var_remap_corner_text(const char *value) { (void)value; ignored("remap_corner_text"); }
 void set_var_remap_psi_text(const char *value) { (void)value; ignored("remap_psi_text"); }

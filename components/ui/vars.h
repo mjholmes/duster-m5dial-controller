@@ -145,6 +145,8 @@ extern const char *get_var_brightness_day_text();
 extern void set_var_brightness_day_text(const char *value);
 extern const char *get_var_brightness_night_text();
 extern void set_var_brightness_night_text(const char *value);
+extern bool get_var_is_brightness_editing_night();
+extern void set_var_is_brightness_editing_night(bool value);
 extern const char *get_var_remap_step_text();
 extern void set_var_remap_step_text(const char *value);
 extern const char *get_var_remap_corner_text();

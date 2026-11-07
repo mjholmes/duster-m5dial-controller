@@ -4,12 +4,15 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "tyre_logic.h"
 
-// Reuses tyre_severity_t (OK/CAUTION/ALERT/NODATA) -- it's a generic
-// four-level severity, not actually tyre-specific despite the name.
-// NODATA if stale; both under- and over-temperature are checked, same
-// bounds-with-hysteresis-free shape as tyre_pressure_severity().
-tyre_severity_t coolant_severity(int16_t temp_c, bool stale,
-                                  int caution_under_c, int alert_under_c,
-                                  int caution_over_c, int alert_over_c);
+// On-device feedback: coolant is shown as plain text tinted blue/red rather
+// than a filled severity box, so this is a direct 3-way colour class, not
+// the generic 4-level tyre_severity_t.
+typedef enum {
+    COOLANT_COLOR_NORMAL = 0,
+    COOLANT_COLOR_COLD,
+    COOLANT_COLOR_HOT,
+} coolant_color_t;
+
+// NORMAL if stale (nothing to tint -- "--" stays the default colour).
+coolant_color_t coolant_color_class(int16_t temp_c, bool stale, int cold_under_c, int hot_over_c);

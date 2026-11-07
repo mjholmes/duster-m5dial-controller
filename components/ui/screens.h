@@ -99,14 +99,15 @@ typedef struct _objects_t {
     lv_obj_t *dtc_code_5;
     lv_obj_t *dtc_code_6;
     lv_obj_t *dtc_code_7;
+    lv_obj_t *dtc_back;
     lv_obj_t *engine_header;
     lv_obj_t *fuel_level_value;
     lv_obj_t *fuel_level_label;
-    lv_obj_t *coolant_box;
     lv_obj_t *coolant_temp_value;
     lv_obj_t *coolant_temp_label;
     lv_obj_t *obj5;
     lv_obj_t *settings_brightness_row;
+    lv_obj_t *settings_brightness_text;
     lv_obj_t *settings_firmware_row;
     lv_obj_t *settings_remap_row;
     lv_obj_t *remap_header;
@@ -116,7 +117,9 @@ typedef struct _objects_t {
     lv_obj_t *remap_back;
     lv_obj_t *brightness_header;
     lv_obj_t *brightness_day_row;
+    lv_obj_t *brightness_day_text;
     lv_obj_t *brightness_night_row;
+    lv_obj_t *brightness_night_text;
     lv_obj_t *brightness_back;
 } objects_t;
 

@@ -5,6 +5,7 @@
 #include "control.h"
 #include "tyre_logic.h"
 #include "tyre_remap_flow.h"
+#include "engine_logic.h"
 
 // Take this loop's model snapshot and format display strings.
 void ui_vars_refresh(uint32_t now_ms);
@@ -17,7 +18,9 @@ const ui_model_t *ui_vars_model(void);
 // it needs no derivation.
 tyre_severity_t ui_vars_tyre_pressure_severity(tyre_pos_t pos);
 tyre_severity_t ui_vars_wheel_slip_severity(tyre_pos_t pos);
-tyre_severity_t ui_vars_coolant_severity(void);
+// Coolant (on-device feedback): no severity box any more, just the text
+// colour -- a direct 3-way class, not the generic 4-level severity.
+coolant_color_t ui_vars_coolant_color(void);
 
 // Issue #17 (Engine screen), consumed once the EEZ screen exists (not yet
 // wired to vars.h/screens -- see the commit that adds the Engine screen).
