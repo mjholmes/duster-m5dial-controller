@@ -16,6 +16,8 @@ static const struct {
     [CAN_SIG_WHEEL_SPEED_FRONT] = { 0x29A, 8, "WHEEL_SPEED_FRONT" }, // BO_ 666
     [CAN_SIG_WHEEL_SPEED_REAR]  = { 0x29C, 8, "WHEEL_SPEED_REAR" },  // BO_ 668
     [CAN_SIG_ETC]               = { 0x1AA, 4, "ETC_STATUS" },        // BO_ 426
+    [CAN_SIG_COOLANT_TEMP]      = { 0x5DA, 8, "COOLANT_TEMP" },      // BO_ 1498: byte 0 - 40 = degC
+    [CAN_SIG_FUEL_LEVEL]        = { 0x4F8, 8, "FUEL_LEVEL" },        // BO_ 1272: bytes 0-1 LE = centilitres, UNCONFIRMED
 };
 
 #define OBD_ENGINE_RESPONSE_ID 0x7E8
@@ -61,6 +63,14 @@ can_dec_result_t can_decode(uint32_t id, bool extended, bool rtr,
 
     case CAN_SIG_TEMP:
         out->ext_temp_c = (int8_t)((int)data[0] - 40);
+        return CAN_DEC_OK;
+
+    case CAN_SIG_COOLANT_TEMP:
+        out->coolant_temp_c = (int16_t)((int)data[0] - 40);
+        return CAN_DEC_OK;
+
+    case CAN_SIG_FUEL_LEVEL:
+        out->fuel_centiliters = (uint16_t)(data[0] | (data[1] << 8));
         return CAN_DEC_OK;
 
     case CAN_SIG_LIGHTS:

@@ -7,17 +7,38 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 #include "esp_app_desc.h"
 #include "esp_log.h"
 #include "sdkconfig.h"
 #include "settings.h"
 #include "ota_client.h"
+#include "engine_logic.h"
 
 static const char *TAG = "ui_vars";
 
 static ui_model_t s_snap;
 static char s_speed[4];
 static char s_temp[8];
+static char s_coolant_temp[12];  // int16_t range in the format string, not just -40..215
+static coolant_color_t s_coolant_color;
+static char s_fuel_level[16];    // "42 L" -- litres, not percent (issue #17 asks for litres)
+
+// Settings + tyre remap flow (issue #1).
+static char s_settings_brightness[40];  // "Brightness: day 80%, night 40%"
+// Brightness screen (on-device feedback: editing only follows whichever of
+// day/night is currently active -- this screen lets either be adjusted
+// directly, independent of the car's actual light state).
+static bool s_brightness_edit_night;    // which row the encoder adjusts
+static char s_brightness_day[16];       // "Day: 80%"
+static char s_brightness_night[16];     // "Night: 40%"
+static tyre_remap_t s_remap;
+static char s_remap_step[16];           // "1/4"
+static char s_remap_corner[16];         // "FRONT LEFT"
+static char s_remap_psi[6];             // candidate's reading, same shape as s_tyre_text
+static char s_remap_can_corner[3];      // "FL"
+static const char *const REMAP_CORNER_NAME[4] = { "FRONT LEFT", "FRONT RIGHT", "REAR LEFT", "REAR RIGHT" };
+static const char *const REMAP_CORNER_CODE[4] = { "FL", "FR", "RL", "RR" };
 static char s_dtc_count[4];
 static const char *s_comms_text = "";
 static uint32_t s_speed_shown_ms;
@@ -30,6 +51,13 @@ static char s_slip_text[TYRE_COUNT][6];   // "+14%" / "-3%" / "0%" / "--"
 static char s_wd_mode[6];                 // "AUTO" / "LOCK" / "2WD" / "--"
 static char s_wd_torque[10];              // "120 Nm" / "-- Nm"
 static tyre_severity_t s_tyre_sev[TYRE_COUNT];
+// Issue #1: for physical position i, which CAN-reported position's
+// reading/severity to show there. Only applied to TPMS display -- wheel
+// speed sensors are hub-mounted, not wheel-mounted, so they're never
+// remapped (docs posted to issue #1). Refreshed each tick in case the
+// remap flow just committed a change; falls back to identity if whatever
+// settings holds isn't a valid permutation.
+static uint8_t s_tyre_map[TYRE_COUNT] = { 0, 1, 2, 3 };
 static tyre_severity_t s_slip_sev[TYRE_COUNT];  // fed back each loop -- hysteresis state
 static tyre_warn_state_t s_tyre_warn;
 static bool s_tyre_warning_now;
@@ -51,6 +79,18 @@ static bool s_ota_error;
 void ui_vars_refresh(uint32_t now_ms)
 {
     model_snapshot(&s_snap);
+
+    {
+        uint8_t raw_map[TYRE_COUNT];
+        settings_tyre_map(raw_map);
+        if (tyre_map_is_valid(raw_map)) {
+            memcpy(s_tyre_map, raw_map, sizeof(s_tyre_map));
+        } else {
+            for (int i = 0; i < TYRE_COUNT; i++) {
+                s_tyre_map[i] = (uint8_t)i;
+            }
+        }
+    }
 
     if (!s_started) {
         snprintf(s_ota_version, sizeof(s_ota_version), "%s", esp_app_get_description()->version);
@@ -76,6 +116,25 @@ void ui_vars_refresh(uint32_t now_ms)
     } else {
         snprintf(s_temp, sizeof(s_temp), "%d\xC2\xB0" "C", s_snap.ext_temp_c);
     }
+
+    // Coolant (issue #17; on-device feedback: text colour, not a box).
+    s_coolant_color = coolant_color_class(s_snap.coolant_temp_c, s_snap.coolant_stale,
+                                           CONFIG_COOLANT_COLD_UNDER_C, CONFIG_COOLANT_HOT_OVER_C);
+    if (s_snap.coolant_stale) {
+        snprintf(s_coolant_temp, sizeof(s_coolant_temp), "--");
+    } else {
+        snprintf(s_coolant_temp, sizeof(s_coolant_temp), "%d\xC2\xB0" "C", s_snap.coolant_temp_c);
+    }
+
+    // Fuel (issue #17): 0x4F8 bytes 0-1, UNCONFIRMED -- centilitres direct
+    // from the CAN broadcast, no tank-capacity estimate needed.
+    if (s_snap.fuel_stale) {
+        snprintf(s_fuel_level, sizeof(s_fuel_level), "--");
+    } else {
+        int litres = (s_snap.fuel_centiliters + 50) / 100;
+        snprintf(s_fuel_level, sizeof(s_fuel_level), "%d L", litres);
+    }
+
     // DTC (SPEC 8.4). Until the OBD client exists (step 6) the status stays
     // DTC_NOT_READ and nothing is shown.
     if (s_snap.dtc.count > 0) {
@@ -107,6 +166,23 @@ void ui_vars_refresh(uint32_t now_ms)
         } else {
             snprintf(s_tyre_text[pos], sizeof(s_tyre_text[pos]), "%d", tyre_psi(s_snap.tyre_pressures.raw[pos]));
         }
+    }
+
+    // Settings + tyre remap flow (issue #1). After the loop above so
+    // s_tyre_text[] (indexed by raw CAN corner, unmapped) is current.
+    snprintf(s_settings_brightness, sizeof(s_settings_brightness), "Brightness: day %d%%, night %d%%",
+             settings_brightness_pct(false), settings_brightness_pct(true));
+    // Selection itself is shown by the button's own CHECKED (green) state,
+    // not a text marker -- see tick_screen_brightness().
+    snprintf(s_brightness_day, sizeof(s_brightness_day), "Day: %d%%", settings_brightness_pct(false));
+    snprintf(s_brightness_night, sizeof(s_brightness_night), "Night: %d%%", settings_brightness_pct(true));
+    {
+        int step = s_remap.step < 4 ? s_remap.step : 3;
+        snprintf(s_remap_step, sizeof(s_remap_step), "%d/4", step + 1);
+        snprintf(s_remap_corner, sizeof(s_remap_corner), "%s", REMAP_CORNER_NAME[step]);
+        uint8_t cand = tyre_remap_candidate(&s_remap);
+        snprintf(s_remap_psi, sizeof(s_remap_psi), "%s", s_tyre_text[cand]);
+        snprintf(s_remap_can_corner, sizeof(s_remap_can_corner), "%s", REMAP_CORNER_CODE[cand]);
     }
 
     // Wheel slip: gated by speed, referenced to the median of all four.
@@ -241,8 +317,9 @@ const ui_model_t *ui_vars_model(void)
     return &s_snap;
 }
 
-tyre_severity_t ui_vars_tyre_pressure_severity(tyre_pos_t pos) { return s_tyre_sev[pos]; }
+tyre_severity_t ui_vars_tyre_pressure_severity(tyre_pos_t pos) { return s_tyre_sev[s_tyre_map[pos]]; }
 tyre_severity_t ui_vars_wheel_slip_severity(tyre_pos_t pos) { return s_slip_sev[pos]; }
+coolant_color_t ui_vars_coolant_color(void) { return s_coolant_color; }
 
 const char *get_var_speed(void) { return s_speed; }
 const char *get_var_temperature(void) { return s_temp; }
@@ -253,15 +330,44 @@ bool get_var_is_auto_mode(void) { return s_snap.mode == MODE_AUTO; }
 bool get_var_opstatus_ledbar(void) { return s_snap.aux_actual.ledbar; }
 bool get_var_opstatus_fog(void) { return s_snap.aux_actual.fog; }
 
+const char *get_var_coolant_temp_text(void) { return s_coolant_temp; }
+const char *get_var_fuel_level_text(void) { return s_fuel_level; }
+const char *get_var_settings_brightness_text(void) { return s_settings_brightness; }
+const char *get_var_brightness_day_text(void) { return s_brightness_day; }
+const char *get_var_brightness_night_text(void) { return s_brightness_night; }
+// get_var_is_brightness_editing_night(): for tick_screen_brightness() (in
+// screens.c, which only ever calls get_var_*/set_var_*/action_*) to sync
+// the day/night buttons' CHECKED state. ui_vars_brightness_editing_night()
+// is the same value for ui_bridge.c, which isn't generated code and can
+// include ui_vars.h directly.
+bool get_var_is_brightness_editing_night(void) { return s_brightness_edit_night; }
+bool ui_vars_brightness_editing_night(void) { return s_brightness_edit_night; }
+void ui_vars_brightness_select(bool night) { s_brightness_edit_night = night; }
+const char *get_var_remap_step_text(void) { return s_remap_step; }
+const char *get_var_remap_corner_text(void) { return s_remap_corner; }
+const char *get_var_remap_psi_text(void) { return s_remap_psi; }
+const char *get_var_remap_can_corner_text(void) { return s_remap_can_corner; }
+tyre_remap_t *ui_vars_remap_state(void) { return &s_remap; }
+
 bool get_var_is_dtc_present(void) { return s_snap.dtc.count > 0 || s_snap.dtc.mil_on; }
 const char *get_var_dtc_count(void) { return s_dtc_count; }
+// Issue #15: the actual codes, not just a count. codes_read may be less
+// than count if Mode 03 truncated; unused slots (>= codes_read) are blank.
+const char *get_var_dtc_code_0(void) { return s_snap.dtc.codes_read > 0 ? s_snap.dtc.codes[0] : ""; }
+const char *get_var_dtc_code_1(void) { return s_snap.dtc.codes_read > 1 ? s_snap.dtc.codes[1] : ""; }
+const char *get_var_dtc_code_2(void) { return s_snap.dtc.codes_read > 2 ? s_snap.dtc.codes[2] : ""; }
+const char *get_var_dtc_code_3(void) { return s_snap.dtc.codes_read > 3 ? s_snap.dtc.codes[3] : ""; }
+const char *get_var_dtc_code_4(void) { return s_snap.dtc.codes_read > 4 ? s_snap.dtc.codes[4] : ""; }
+const char *get_var_dtc_code_5(void) { return s_snap.dtc.codes_read > 5 ? s_snap.dtc.codes[5] : ""; }
+const char *get_var_dtc_code_6(void) { return s_snap.dtc.codes_read > 6 ? s_snap.dtc.codes[6] : ""; }
+const char *get_var_dtc_code_7(void) { return s_snap.dtc.codes_read > 7 ? s_snap.dtc.codes[7] : ""; }
 bool get_var_is_comms_lost(void) { return s_comms_text[0] != '\0'; }
 const char *get_var_comms_text(void) { return s_comms_text; }
 
-const char *get_var_tyre_fl_text(void) { return s_tyre_text[TYRE_FL]; }
-const char *get_var_tyre_fr_text(void) { return s_tyre_text[TYRE_FR]; }
-const char *get_var_tyre_rl_text(void) { return s_tyre_text[TYRE_RL]; }
-const char *get_var_tyre_rr_text(void) { return s_tyre_text[TYRE_RR]; }
+const char *get_var_tyre_fl_text(void) { return s_tyre_text[s_tyre_map[TYRE_FL]]; }
+const char *get_var_tyre_fr_text(void) { return s_tyre_text[s_tyre_map[TYRE_FR]]; }
+const char *get_var_tyre_rl_text(void) { return s_tyre_text[s_tyre_map[TYRE_RL]]; }
+const char *get_var_tyre_rr_text(void) { return s_tyre_text[s_tyre_map[TYRE_RR]]; }
 const char *get_var_slip_fl_text(void) { return s_slip_text[TYRE_FL]; }
 const char *get_var_slip_fr_text(void) { return s_slip_text[TYRE_FR]; }
 const char *get_var_slip_rl_text(void) { return s_slip_text[TYRE_RL]; }
@@ -300,8 +406,27 @@ void set_var_is_below_freezing(bool value) { (void)value; ignored("is_below_free
 void set_var_is_auto_mode(bool value) { (void)value; ignored("is_auto_mode"); }
 void set_var_opstatus_ledbar(bool value) { (void)value; ignored("opstatus_ledbar"); }
 void set_var_opstatus_fog(bool value) { (void)value; ignored("opstatus_fog"); }
+void set_var_coolant_temp_text(const char *value) { (void)value; ignored("coolant_temp_text"); }
+void set_var_fuel_level_text(const char *value) { (void)value; ignored("fuel_level_text"); }
+void set_var_settings_brightness_text(const char *value) { (void)value; ignored("settings_brightness_text"); }
+void set_var_brightness_day_text(const char *value) { (void)value; ignored("brightness_day_text"); }
+void set_var_brightness_night_text(const char *value) { (void)value; ignored("brightness_night_text"); }
+void set_var_is_brightness_editing_night(bool value) { (void)value; ignored("is_brightness_editing_night"); }
+void set_var_remap_step_text(const char *value) { (void)value; ignored("remap_step_text"); }
+void set_var_remap_corner_text(const char *value) { (void)value; ignored("remap_corner_text"); }
+void set_var_remap_psi_text(const char *value) { (void)value; ignored("remap_psi_text"); }
+void set_var_remap_can_corner_text(const char *value) { (void)value; ignored("remap_can_corner_text"); }
+
 void set_var_is_dtc_present(bool value) { (void)value; ignored("is_dtc_present"); }
 void set_var_dtc_count(const char *value) { (void)value; ignored("dtc_count"); }
+void set_var_dtc_code_0(const char *value) { (void)value; ignored("dtc_code_0"); }
+void set_var_dtc_code_1(const char *value) { (void)value; ignored("dtc_code_1"); }
+void set_var_dtc_code_2(const char *value) { (void)value; ignored("dtc_code_2"); }
+void set_var_dtc_code_3(const char *value) { (void)value; ignored("dtc_code_3"); }
+void set_var_dtc_code_4(const char *value) { (void)value; ignored("dtc_code_4"); }
+void set_var_dtc_code_5(const char *value) { (void)value; ignored("dtc_code_5"); }
+void set_var_dtc_code_6(const char *value) { (void)value; ignored("dtc_code_6"); }
+void set_var_dtc_code_7(const char *value) { (void)value; ignored("dtc_code_7"); }
 void set_var_is_comms_lost(bool value) { (void)value; ignored("is_comms_lost"); }
 void set_var_comms_text(const char *value) { (void)value; ignored("comms_text"); }
 

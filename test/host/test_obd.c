@@ -221,7 +221,7 @@ static void test_no_dtcs(void)
     const uint8_t r[8] = { 0x06, 0x41, 0x01, 0x00, 0x07, 0xE5, 0x00, 0x00 };
     ecu(r, 0xC7);
     CHECK(s_c.dtc.status == DTC_NONE && s_c.dtc.count == 0 && !s_c.dtc.mil_on);
-    CHECK(s_nsent == 1);                          // no Mode 03
+    CHECK(s_nsent == 1);
     CHECK(s_c.state == OBD_IDLE && s_c.dtc_changed);
 }
 
@@ -292,12 +292,12 @@ static void test_mode03_only_when_count_changes(void)
     ecu(r, 0xC7);
     const uint8_t m[8] = { 0x04, 0x43, 0x01, 0x03, 0x01, 0, 0, 0 };
     ecu(m, 0xC7);
-    CHECK(s_nsent == 2 && s_c.dtc.codes_read == 1);
+    CHECK(s_nsent == 2 && s_c.dtc.codes_read == 1 && s_c.state == OBD_IDLE);
 
     tick(30000, 0xC7);                            // periodic poll
     CHECK(s_nsent == 3);
-    ecu(r, 0xC7);                                 // same count
-    CHECK(s_nsent == 3 && s_c.state == OBD_IDLE); // no Mode 03
+    ecu(r, 0xC7);                                 // same count -> no Mode 03
+    CHECK(s_nsent == 3 && s_c.state == OBD_IDLE);
 
     tick(30000, 0xC7);
     const uint8_t r2[8] = { 0x06, 0x41, 0x01, 0x02, 0, 0, 0, 0 };

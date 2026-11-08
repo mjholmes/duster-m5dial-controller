@@ -71,3 +71,9 @@ float wheel_slip_average_update(float prev_avg, int slip_pct_now, uint32_t dt_ms
 // the falling edge only (rising edges always use the plain threshold).
 tyre_severity_t wheel_slip_severity(tyre_severity_t prev, bool nodata, int slip_pct_abs,
                                      int caution_pct, int alert_pct, int hysteresis_pct);
+
+// Issue #1: true if map is a permutation of 0..TYRE_COUNT-1 (each value
+// appears exactly once) -- settings has no notion of this itself, so the
+// caller (ui_vars) validates whatever it reads back and falls back to
+// identity if it isn't one (e.g. corrupted/never-written NVS).
+bool tyre_map_is_valid(const uint8_t map[TYRE_COUNT]);
