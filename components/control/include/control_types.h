@@ -92,7 +92,7 @@ typedef struct {
     // engine (issue #17)
     int16_t  coolant_temp_c;      // -40..215, 0x5DA
     bool     coolant_stale;
-    uint8_t  fuel_level_pct;      // 0..100, OBD Mode 01 PID 0x2F
+    uint16_t fuel_centiliters;    // 0x4F8 bytes 0-1 LE, UNCONFIRMED (docs/can/dacia-can-notes.md)
     bool     fuel_stale;          // true until the first reading arrives, same as the other sources
     // control
     op_mode_t mode;

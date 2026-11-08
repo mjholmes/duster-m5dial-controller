@@ -232,10 +232,7 @@ esp_err_t control_start(void)
     // Every source reads as stale until its first data arrives. Without
     // this, a zero-initialised rx_ms reads as "fresh" for up to that
     // source's own stale window after boot, since now - 0 hasn't yet
-    // reached the limit -- invisible for fast CAN broadcasts (window is
-    // ~1s) but very visible for OBD-polled fuel, which only updates once
-    // the engine's been running long enough for a poll round, and showed
-    // as a bogus "0 L" instead of "--" until then.
+    // reached the limit.
     uint32_t now = now_ms();
     s_speed_rx_ms = now - CONFIG_STALE_DISPLAY_MS;
     s_temp_rx_ms = now - CONFIG_STALE_DISPLAY_MS;
@@ -295,6 +292,14 @@ void control_can_coolant_temp(int16_t temp_c, uint32_t rx_ms)
     xSemaphoreGive(s_lock);
 }
 
+void control_can_fuel_level(uint16_t centiliters, uint32_t rx_ms)
+{
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    s_model.fuel_centiliters = centiliters;
+    s_fuel_rx_ms = rx_ms;
+    xSemaphoreGive(s_lock);
+}
+
 void control_can_ignition(uint8_t raw)
 {
     xSemaphoreTake(s_lock, portMAX_DELAY);
@@ -350,13 +355,6 @@ void control_obd_dtc(const dtc_state_t *dtc)
     xSemaphoreGive(s_lock);
 }
 
-void control_obd_fuel_level(uint8_t pct, uint32_t rx_ms)
-{
-    xSemaphoreTake(s_lock, portMAX_DELAY);
-    s_model.fuel_level_pct = pct;
-    s_fuel_rx_ms = rx_ms;
-    xSemaphoreGive(s_lock);
-}
 
 void control_can_bus_off(bool bus_off)
 {

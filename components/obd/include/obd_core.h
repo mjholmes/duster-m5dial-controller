@@ -31,7 +31,6 @@ typedef enum {
     OBD_WAIT_RUNNING,    // aborted by cranking: until Running
     OBD_PID01_WAIT,      // request sent, waiting for 41 01
     OBD_MODE03_WAIT,     // request sent, waiting for 43 (single or multi-frame)
-    OBD_PID2F_WAIT,      // request sent, waiting for 41 2F (fuel level, issue #17)
     OBD_RETRY_WAIT,      // no answer: waiting to retry
     OBD_IDLE,            // waiting for the next periodic poll
 } obd_state_t;
@@ -48,9 +47,6 @@ typedef struct {
     isotp_rx_t  isotp;
     dtc_state_t dtc;
     bool        dtc_changed;      // set when dtc changes; caller clears after publishing
-    uint8_t     fuel_level_pct;   // 0..100, issue #17; valid only once fuel_valid is set
-    bool        fuel_valid;
-    bool        fuel_changed;     // set when a new reading arrives; caller clears after publishing
     obd_frame_t outbox[2];
     uint8_t     outbox_len;
 } obd_core_t;

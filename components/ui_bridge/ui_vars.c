@@ -126,12 +126,12 @@ void ui_vars_refresh(uint32_t now_ms)
         snprintf(s_coolant_temp, sizeof(s_coolant_temp), "%d\xC2\xB0" "C", s_snap.coolant_temp_c);
     }
 
-    // Fuel (issue #17): OBD gives percent only; litres is an estimate
-    // (percent * tank capacity / 100), not a direct measurement.
+    // Fuel (issue #17): 0x4F8 bytes 0-1, UNCONFIRMED -- centilitres direct
+    // from the CAN broadcast, no tank-capacity estimate needed.
     if (s_snap.fuel_stale) {
         snprintf(s_fuel_level, sizeof(s_fuel_level), "--");
     } else {
-        int litres = (s_snap.fuel_level_pct * CONFIG_FUEL_TANK_CAPACITY_L + 50) / 100;
+        int litres = (s_snap.fuel_centiliters + 50) / 100;
         snprintf(s_fuel_level, sizeof(s_fuel_level), "%d L", litres);
     }
 

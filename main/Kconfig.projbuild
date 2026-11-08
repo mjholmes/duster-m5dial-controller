@@ -401,26 +401,12 @@ menu "Duster controller"
 
         config FUEL_STALE_MS
             int "Fuel level stale timeout (ms)"
-            default 900000
+            default 1000
             help
-                Issue #17. Fuel level is read over OBD on the same round as
-                the DTC read (DTC_REPOLL_S, default 600s, plus every engine
-                start), not a separate faster poll -- this threshold is
-                deliberately looser than COOLANT_STALE_MS (1.5x the repoll
-                interval) so one missed round doesn't immediately blank the
-                reading.
-
-        config FUEL_TANK_CAPACITY_L
-            int "Fuel tank capacity (litres)"
-            default 50
-            help
-                Issue #17 asks for litres, but OBD PID 0x2F only reports a
-                percentage (0-100) -- there is no standard PID for an
-                absolute litre reading. Litres shown are an estimate
-                (percent * this value / 100), not a direct measurement.
-                50L is commonly cited for this model but NOT confirmed
-                against this specific car's handbook/filler cap -- treat
-                as a placeholder, same as the tyre pressure defaults.
+                Issue #17. Fuel level is now a CAN broadcast (0x4F8 bytes
+                0-1, UNCONFIRMED -- docs/can/dacia-can-notes.md), same
+                cadence as coolant, so this uses the same short window
+                (was 900000ms back when this polled OBD PID 0x2F instead).
     endmenu
 
 endmenu

@@ -327,6 +327,11 @@ static void test_can_decode(void)
     CHECK(can_decode(0x5DA, false, false, coolant_hot, 8, &d) == CAN_DEC_OK && d.coolant_temp_c == 215);
     CHECK(can_decode(0x5DA, false, false, coolant_warm, 7, &d) == CAN_DEC_MALFORMED);
 
+    // Fuel: 0x4F8 bytes 0-1 LE = centilitres, UNCONFIRMED (docs/can/dacia-can-notes.md).
+    const uint8_t fuel_52l[8] = { 0x88, 0x14, 0x30, 0xFF, 0xFF, 0x03, 0xFF, 0x00 };  // 5256 cl = 52.56 L
+    CHECK(can_decode(0x4F8, false, false, fuel_52l, 8, &d) == CAN_DEC_OK && d.fuel_centiliters == 5256);
+    CHECK(can_decode(0x4F8, false, false, fuel_52l, 7, &d) == CAN_DEC_MALFORMED);
+
     // Field notes: 0x5DE byte 0 0x09 = main beam and front fog on.
     const uint8_t lights[8] = { 0x09 };
     CHECK(can_decode(0x5DE, false, false, lights, 8, &d) == CAN_DEC_OK);

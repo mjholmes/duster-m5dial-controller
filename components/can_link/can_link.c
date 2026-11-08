@@ -237,6 +237,9 @@ static void handle_frame(const can_rx_frame_t *f, uint32_t now)
     case CAN_SIG_COOLANT_TEMP:
         control_can_coolant_temp(d.coolant_temp_c, now);
         break;
+    case CAN_SIG_FUEL_LEVEL:
+        control_can_fuel_level(d.fuel_centiliters, now);
+        break;
     default:
         break;
     }
