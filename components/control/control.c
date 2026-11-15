@@ -292,13 +292,6 @@ void control_can_coolant_temp(int16_t temp_c, uint32_t rx_ms)
     xSemaphoreGive(s_lock);
 }
 
-void control_can_fuel_level(uint16_t centiliters, uint32_t rx_ms)
-{
-    xSemaphoreTake(s_lock, portMAX_DELAY);
-    s_model.fuel_centiliters = centiliters;
-    s_fuel_rx_ms = rx_ms;
-    xSemaphoreGive(s_lock);
-}
 
 void control_can_ignition(uint8_t raw)
 {
