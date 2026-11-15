@@ -89,6 +89,16 @@ typedef struct {
     bool     below_freezing;      // hysteresis, false when temp stale
     uint8_t  ignition_raw;        // 0x350 byte 0, 0 = not yet seen
     vehicle_lights_t veh;
+    // engine (issue #17)
+    int16_t  coolant_temp_c;      // -40..215, 0x5DA
+    bool     coolant_stale;
+    // Issue #17: no confirmed fuel source yet. 0x4F8 bytes 0-1 was tried and
+    // disproven on the vehicle (static across a full fuel cycle, jumps on
+    // ignition -- not the tank, docs/can/dacia-can-notes.md); OBD PID 0x2F
+    // got no response either. Nothing sets fuel_centiliters, so fuel_stale
+    // stays permanently true and the UI correctly shows "--".
+    uint16_t fuel_centiliters;
+    bool     fuel_stale;
     // control
     op_mode_t mode;
     uint16_t last_applied_req_seq;

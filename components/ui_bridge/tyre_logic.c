@@ -105,6 +105,18 @@ float wheel_slip_average_update(float prev_avg, int slip_pct_now, uint32_t dt_ms
     return prev_avg + alpha * ((float)slip_pct_now - prev_avg);
 }
 
+bool tyre_map_is_valid(const uint8_t map[TYRE_COUNT])
+{
+    bool seen[TYRE_COUNT] = { false };
+    for (int i = 0; i < TYRE_COUNT; i++) {
+        if (map[i] >= TYRE_COUNT || seen[map[i]]) {
+            return false;
+        }
+        seen[map[i]] = true;
+    }
+    return true;
+}
+
 tyre_severity_t wheel_slip_severity(tyre_severity_t prev, bool nodata, int slip_pct_abs,
                                      int caution_pct, int alert_pct, int hysteresis_pct)
 {

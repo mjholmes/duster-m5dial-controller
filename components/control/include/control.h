@@ -14,6 +14,7 @@ bool control_request(const ctrl_req_t *req);
 // control only when they change.
 void control_can_speed(uint8_t mph, uint32_t rx_ms);
 void control_can_temp(int8_t temp_c, uint32_t rx_ms);
+void control_can_coolant_temp(int16_t temp_c, uint32_t rx_ms);
 void control_can_ignition(uint8_t raw);
 void control_can_lights(vehicle_lights_t lights, bool changed, uint32_t rx_ms);
 void control_can_bus_off(bool bus_off);

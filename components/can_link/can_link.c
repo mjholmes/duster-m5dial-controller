@@ -234,6 +234,9 @@ static void handle_frame(const can_rx_frame_t *f, uint32_t now)
     case CAN_SIG_ETC:
         control_can_etc(d.etc.torque_nm, d.etc.coupler, d.etc.mode, d.etc.selector, d.etc.failure, now);
         break;
+    case CAN_SIG_COOLANT_TEMP:
+        control_can_coolant_temp(d.coolant_temp_c, now);
+        break;
     default:
         break;
     }

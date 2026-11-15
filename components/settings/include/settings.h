@@ -25,5 +25,16 @@ void settings_set_brightness_pct(bool night, int pct);
 bool settings_ota_beta_channel(void);
 void settings_set_ota_beta_channel(bool beta);
 
+// Tyre position remap (issue #1): for physical corner i (0=FL,1=FR,2=RL,
+//3=RR, matching tyre_pos_t), which CAN-reported corner's reading to show
+// there. Just storage -- settings has no notion of "valid permutation";
+// the caller (ui_vars, via tyre_logic.c's tyre_map_is_valid()) validates
+// and falls back to identity if what's stored isn't one. Defaults to
+// identity {0,1,2,3} until first set. Committed immediately, same
+// reasoning as the OTA channel: changes rarely enough that flash wear
+// from debouncing isn't a concern.
+void settings_tyre_map(uint8_t map[4]);
+void settings_set_tyre_map(const uint8_t map[4]);
+
 // Commit pending changes once they have been stable long enough. Call each loop.
 void settings_service(uint32_t now_ms);

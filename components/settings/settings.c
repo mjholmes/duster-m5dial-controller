@@ -1,6 +1,7 @@
 #include "settings.h"
 
 #include <stdbool.h>
+#include <string.h>
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "esp_log.h"
@@ -15,6 +16,7 @@ static const char *const KEY_BRIGHTNESS[2] = { "bright_day", "bright_night" };
 static const char *KEY_BRIGHTNESS_OLD = "bright_pct";
 
 static const char *KEY_OTA_BETA = "ota_beta";
+static const char *KEY_TYRE_MAP = "tyre_map";
 
 static int s_brightness_pct[2] = {
     CONFIG_DISPLAY_BRIGHTNESS_DAY_DEFAULT_PCT,
@@ -23,6 +25,7 @@ static int s_brightness_pct[2] = {
 static bool s_dirty;
 static uint32_t s_changed_ms;
 static bool s_ota_beta_channel;
+static uint8_t s_tyre_map[4] = { 0, 1, 2, 3 };
 
 static bool brightness_valid(int pct)
 {
@@ -54,6 +57,11 @@ esp_err_t settings_init(void)
         uint8_t beta;
         if (nvs_get_u8(h, KEY_OTA_BETA, &beta) == ESP_OK) {
             s_ota_beta_channel = beta != 0;
+        }
+        uint8_t map[4];
+        size_t map_len = sizeof(map);
+        if (nvs_get_blob(h, KEY_TYRE_MAP, map, &map_len) == ESP_OK && map_len == sizeof(map)) {
+            memcpy(s_tyre_map, map, sizeof(map));
         }
         nvs_close(h);
     }
@@ -99,6 +107,32 @@ void settings_set_ota_beta_channel(bool beta)
     }
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "save ota channel failed: %s", esp_err_to_name(err));
+    }
+}
+
+void settings_tyre_map(uint8_t map[4])
+{
+    memcpy(map, s_tyre_map, sizeof(s_tyre_map));
+}
+
+void settings_set_tyre_map(const uint8_t map[4])
+{
+    if (memcmp(map, s_tyre_map, sizeof(s_tyre_map)) == 0) {
+        return;
+    }
+    memcpy(s_tyre_map, map, sizeof(s_tyre_map));
+
+    nvs_handle_t h;
+    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &h);
+    if (err == ESP_OK) {
+        err = nvs_set_blob(h, KEY_TYRE_MAP, s_tyre_map, sizeof(s_tyre_map));
+        if (err == ESP_OK) {
+            err = nvs_commit(h);
+        }
+        nvs_close(h);
+    }
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "save tyre map failed: %s", esp_err_to_name(err));
     }
 }
 

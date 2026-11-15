@@ -41,7 +41,22 @@ enum FlowGlobalVariables {
     FLOW_GLOBAL_VARIABLE_IS_OTA_BETA_CHANNEL = 25,
     FLOW_GLOBAL_VARIABLE_IS_OTA_STABLE_CHANNEL = 26,
     FLOW_GLOBAL_VARIABLE_IS_OTA_BUSY = 27,
-    FLOW_GLOBAL_VARIABLE_IS_OTA_ERROR = 28
+    FLOW_GLOBAL_VARIABLE_IS_OTA_ERROR = 28,
+    FLOW_GLOBAL_VARIABLE_DTC_CODE_0 = 29,
+    FLOW_GLOBAL_VARIABLE_DTC_CODE_1 = 30,
+    FLOW_GLOBAL_VARIABLE_DTC_CODE_2 = 31,
+    FLOW_GLOBAL_VARIABLE_DTC_CODE_3 = 32,
+    FLOW_GLOBAL_VARIABLE_DTC_CODE_4 = 33,
+    FLOW_GLOBAL_VARIABLE_DTC_CODE_5 = 34,
+    FLOW_GLOBAL_VARIABLE_DTC_CODE_6 = 35,
+    FLOW_GLOBAL_VARIABLE_DTC_CODE_7 = 36,
+    FLOW_GLOBAL_VARIABLE_COOLANT_TEMP_TEXT = 37,
+    FLOW_GLOBAL_VARIABLE_FUEL_LEVEL_TEXT = 38,
+    FLOW_GLOBAL_VARIABLE_SETTINGS_BRIGHTNESS_TEXT = 39,
+    FLOW_GLOBAL_VARIABLE_REMAP_STEP_TEXT = 40,
+    FLOW_GLOBAL_VARIABLE_REMAP_CORNER_TEXT = 41,
+    FLOW_GLOBAL_VARIABLE_REMAP_PSI_TEXT = 42,
+    FLOW_GLOBAL_VARIABLE_REMAP_CAN_CORNER_TEXT = 43
 };
 
 // Native global variables
@@ -104,6 +119,42 @@ extern bool get_var_is_ota_busy();
 extern void set_var_is_ota_busy(bool value);
 extern bool get_var_is_ota_error();
 extern void set_var_is_ota_error(bool value);
+extern const char *get_var_dtc_code_0();
+extern void set_var_dtc_code_0(const char *value);
+extern const char *get_var_dtc_code_1();
+extern void set_var_dtc_code_1(const char *value);
+extern const char *get_var_dtc_code_2();
+extern void set_var_dtc_code_2(const char *value);
+extern const char *get_var_dtc_code_3();
+extern void set_var_dtc_code_3(const char *value);
+extern const char *get_var_dtc_code_4();
+extern void set_var_dtc_code_4(const char *value);
+extern const char *get_var_dtc_code_5();
+extern void set_var_dtc_code_5(const char *value);
+extern const char *get_var_dtc_code_6();
+extern void set_var_dtc_code_6(const char *value);
+extern const char *get_var_dtc_code_7();
+extern void set_var_dtc_code_7(const char *value);
+extern const char *get_var_coolant_temp_text();
+extern void set_var_coolant_temp_text(const char *value);
+extern const char *get_var_fuel_level_text();
+extern void set_var_fuel_level_text(const char *value);
+extern const char *get_var_settings_brightness_text();
+extern void set_var_settings_brightness_text(const char *value);
+extern const char *get_var_brightness_day_text();
+extern void set_var_brightness_day_text(const char *value);
+extern const char *get_var_brightness_night_text();
+extern void set_var_brightness_night_text(const char *value);
+extern bool get_var_is_brightness_editing_night();
+extern void set_var_is_brightness_editing_night(bool value);
+extern const char *get_var_remap_step_text();
+extern void set_var_remap_step_text(const char *value);
+extern const char *get_var_remap_corner_text();
+extern void set_var_remap_corner_text(const char *value);
+extern const char *get_var_remap_psi_text();
+extern void set_var_remap_psi_text(const char *value);
+extern const char *get_var_remap_can_corner_text();
+extern void set_var_remap_can_corner_text(const char *value);
 
 #ifdef __cplusplus
 }
